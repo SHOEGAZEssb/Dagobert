@@ -90,6 +90,20 @@ namespace Dagobert
     private async Task PinchAll()
     {
       int num = 0;
+
+      if (Plugin.Configuration.ReopenRetainer)
+      {
+        ulong retainerId;
+        unsafe
+        {
+          var rm = RetainerManager.Instance();
+          var r = rm->GetActiveRetainer();
+          retainerId = r->RetainerId;
+        }
+
+        await ReopenRetainerSellList(retainerId);
+      }
+
       unsafe
       {
         var rm = RetainerManager.Instance();
@@ -166,6 +180,88 @@ namespace Dagobert
 
         await Task.Delay(100);
       }
+    }
+
+    private async Task ReopenRetainerSellList(ulong retainerID)
+    {
+      unsafe
+      {
+        var retainerSellList = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSellList");
+        if (retainerSellList == null)
+          throw new Exception("Reopen Retainer: RetainerSellList is null");
+        Callback.Fire(&retainerSellList->AtkUnitBase, true, -1); // close RetainerSellList
+      }
+
+      await Task.Delay(500);
+
+      unsafe
+      {
+        var selectString = (AddonSelectString*)Svc.GameGui.GetAddonByName("SelectString");
+        if (selectString == null)
+          throw new Exception("Reopen Retainer: SelectString is null");
+        Callback.Fire(&selectString->AtkUnitBase, true, 12); // close SelectString
+      }
+
+      await Task.Delay(500);
+
+      unsafe
+      {
+        var talk = (AddonTalk*)Svc.GameGui.GetAddonByName("Talk");
+        if (talk == null)
+          throw new Exception("Reopen Retainer: Talk is null");
+        Callback.Fire(&talk->AtkUnitBase, true, 1); // close Talk
+      }
+
+      await Task.Delay(1500);
+
+      unsafe
+      {
+        var retainerList = (AddonRetainerList*)Svc.GameGui.GetAddonByName("RetainerList");
+        if (retainerList == null)
+          throw new Exception("Reopen Retainer: RetainerList is null");
+
+        var rm = RetainerManager.Instance();
+        uint i = 0;
+        bool retainerFound = false;
+        for (; i < rm->GetRetainerCount(); ++i)
+        {
+          if (rm->GetRetainerBySortedIndex(i)->RetainerId == retainerID)
+          {
+            retainerFound = true;
+            break;
+          }
+        }
+
+        if (retainerFound)
+        {
+          Svc.Log.Info($"Reopening retainer with id: {i}");
+          Callback.Fire(&retainerList->AtkUnitBase, true, 2, i); // select Retainer
+        }
+        else
+          throw new Exception("No valid retainer found to reopen");
+      }
+
+      await Task.Delay(1000);
+
+      unsafe
+      {
+        var talk = (AddonTalk*)Svc.GameGui.GetAddonByName("Talk");
+        if (talk == null)
+          throw new Exception("Reopen Retainer: Talk 2 is null");
+        Callback.Fire(&talk->AtkUnitBase, true, 1); // close Talk
+      }
+
+      await Task.Delay(500);
+
+      unsafe
+      {
+        var selectString = (AddonSelectString*)Svc.GameGui.GetAddonByName("SelectString");
+        if (selectString == null)
+          throw new Exception("Reopen Retainer: SelectString is null");
+        Callback.Fire(&selectString->AtkUnitBase, true, 2); // open sell
+      }
+
+      await Task.Delay(500);
     }
 
     private void MBHandler_NewPriceReceived(object? sender, NewPriceEventArgs e)

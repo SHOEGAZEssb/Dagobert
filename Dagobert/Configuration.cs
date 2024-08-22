@@ -10,6 +10,8 @@ public class Configuration : IPluginConfiguration
 
   public bool HQ { get; set; } = true;
 
+  public bool ReopenRetainer { get; set; } = true;
+
   // the below exist just to make saving less cumbersome
   public void Save()
   {

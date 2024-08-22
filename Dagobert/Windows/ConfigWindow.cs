@@ -14,11 +14,17 @@ public class ConfigWindow : Window, IDisposable
 
   public override void Draw()
   {
-    // can't ref a property, so use a local copy
     var hq = Plugin.Configuration.HQ;
     if (ImGui.Checkbox("Use HQ price", ref hq))
     {
       Plugin.Configuration.HQ = hq;
+      Plugin.Configuration.Save();
+    }
+
+    var reopen = Plugin.Configuration.HQ;
+    if (ImGui.Checkbox("Reopen Retainer", ref reopen))
+    {
+      Plugin.Configuration.ReopenRetainer = reopen;
       Plugin.Configuration.Save();
     }
   }
