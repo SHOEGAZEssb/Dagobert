@@ -1,7 +1,5 @@
-﻿using Dalamud.Game.ClientState.Keys;
-using Dalamud.Game.Network.Structures;
+﻿using Dalamud.Game.Network.Structures;
 using Dalamud.Utility.Signatures;
-using ECommons.Automation;
 using ECommons.DalamudServices;
 using ECommons.EzHookManager;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -9,11 +7,8 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using ImGuiNET;
 using Lumina.Excel.GeneratedSheets;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Dagobert
 {
@@ -27,13 +22,13 @@ namespace Dagobert
 
     private delegate IntPtr GetFilePointer(byte index);
     [Signature("E8 ?? ?? ?? ?? 48 85 C0 74 14 83 7B 44 00")]
-    private GetFilePointer getFilePtr;
+    private readonly GetFilePointer getFilePtr;
 
     private delegate IntPtr AddonOnSetup(IntPtr addon, uint a2, IntPtr dataPtr);
-    private EzHook<AddonOnSetup> _retainerSellSetup;
+    private readonly EzHook<AddonOnSetup> _retainerSellSetup;
 
     private unsafe delegate void* MarketBoardItemRequestStart(int* a1, int* a2, int* a3);
-    private EzHook<MarketBoardItemRequestStart> _marketBoardItemRequestStartHook;
+    private readonly EzHook<MarketBoardItemRequestStart> _marketBoardItemRequestStartHook;
 
     private readonly Lumina.Excel.ExcelSheet<Item> items;
     private bool newRequest;
@@ -67,37 +62,25 @@ namespace Dagobert
 
     private void MarketBoardOnOfferingsReceived(IMarketBoardCurrentOfferings currentOfferings)
     {
-      if (!newRequest) return;
-
-      //if (!configuration.alwaysOn && !Retainer()) return;
-      //if (!Retainer()) return;
+      if (!newRequest)
+        return;
 
       var i = 0;
       if (useHq && items.Single(j => j.RowId == currentOfferings.ItemListings[0].ItemId).CanBeHq)
       {
-        //while (i < currentOfferings.ItemListings.Count && (!currentOfferings.ItemListings[i].IsHq || (!configuration.undercutSelf && IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId)))) i++;
-        while (i < currentOfferings.ItemListings.Count && (!currentOfferings.ItemListings[i].IsHq || (IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId)))) i++;
+        while (i < currentOfferings.ItemListings.Count && (!currentOfferings.ItemListings[i].IsHq || IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId)))
+          i++;
       }
       else
       {
-        //while (i < currentOfferings.ItemListings.Count && (!configuration.undercutSelf && IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId))) i++;
-        while (i < currentOfferings.ItemListings.Count && (IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId))) i++;
+        while (i < currentOfferings.ItemListings.Count && IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId))
+          i++;
       }
 
       if (i == currentOfferings.ItemListings.Count) return;
 
-      //var price = currentOfferings.ItemListings[i].PricePerUnit - (currentOfferings.ItemListings[i].PricePerUnit % configuration.mod) - configuration.delta;
       var price = currentOfferings.ItemListings[i].PricePerUnit - 1;
-      //price -= (price % configuration.multiple);
-      //price = Math.Max(price, configuration.min);
 
-      ImGui.SetClipboardText(price.ToString());
-      //if (configuration.verbose)
-      //{
-      //  Chat.Print((useHq ? "[HQ] " : string.Empty) + $"{price:n0} copied to clipboard.");
-      //}
-
-      
       NewPrice = price;
       newRequest = false;
     }
@@ -114,7 +97,7 @@ namespace Dagobert
       }
       catch (Exception e)
       {
-        //Log.Error(e, "Market board item request start detour crashed while parsing.");
+        Svc.Log.Error(e, "Market board item request start detour crashed while parsing.");
       }
 
       return _marketBoardItemRequestStartHook!.Original(a1, a2, a3);
@@ -127,9 +110,7 @@ namespace Dagobert
       {
         newRequest = true;
 
-
-        //var shiftHeld = KeyState[VirtualKey.SHIFT];
-        //useHq = shiftHeld ^ (configuration.hq && itemHq);
+        useHq = Plugin.Configuration.HQ && itemHq;
       }
     }
 

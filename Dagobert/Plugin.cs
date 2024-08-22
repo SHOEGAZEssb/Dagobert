@@ -12,35 +12,23 @@ namespace Dagobert;
 public sealed class Plugin : IDalamudPlugin
 {
   [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
-  [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
   [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
-
   [PluginService] public static IMarketBoard MarketBoard { get; private set; } = null!;
 
-  private const string CommandName = "/pmycommand";
-  private AutoPinch _autoPinch;
+  public static Configuration Configuration { get; private set; }
 
-  public Configuration Configuration { get; init; }
+  private readonly AutoPinch _autoPinch;
 
   public readonly WindowSystem WindowSystem = new("Dagobert");
   private ConfigWindow ConfigWindow { get; init; }
-  private MainWindow MainWindow { get; init; }
 
   public Plugin()
   {
     Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-
-    // you might normally want to embed resources and load them from the manifest stream
-    var goatImagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "goat.png");
-
-    ConfigWindow = new ConfigWindow(this);
-    MainWindow = new MainWindow(this, goatImagePath);
-    
-
+    ConfigWindow = new ConfigWindow();
     WindowSystem.AddWindow(ConfigWindow);
-    WindowSystem.AddWindow(MainWindow);
 
-    CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+    CommandManager.AddHandler("/dagobert", new CommandInfo(OnDagobertCommand)
     {
       HelpMessage = "A useful message to display in /xlhelp"
     });
@@ -51,9 +39,6 @@ public sealed class Plugin : IDalamudPlugin
     // to toggle the display status of the configuration ui
     PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
 
-    // Adds another button that is doing the same but for the main ui of the plugin
-    PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
-
     ECommonsMain.Init(PluginInterface, this);
     _autoPinch = new AutoPinch();
   }
@@ -63,16 +48,15 @@ public sealed class Plugin : IDalamudPlugin
     WindowSystem.RemoveAllWindows();
 
     ConfigWindow.Dispose();
-    MainWindow.Dispose();
 
-    CommandManager.RemoveHandler(CommandName);
+    CommandManager.RemoveHandler("/dagobert");
     ECommonsMain.Dispose();
   }
 
-  private void OnCommand(string command, string args)
+  private void OnDagobertCommand(string command, string args)
   {
     // in response to the slash command, just toggle the display status of our main ui
-    ToggleMainUI();
+    ToggleConfigUI();
   }
 
   private void DrawUI()
@@ -82,5 +66,4 @@ public sealed class Plugin : IDalamudPlugin
   }
 
   public void ToggleConfigUI() => ConfigWindow.Toggle();
-  public void ToggleMainUI() => MainWindow.Toggle();
 }

@@ -7,20 +7,17 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
+using Lumina.Excel.GeneratedSheets2;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Dagobert
 {
   internal class AutoPinch
   {
-    private MarketBoardHandler _mbHandler;
+    private readonly MarketBoardHandler _mbHandler;
     private uint? _newPrice;
+    private bool _pinching = false;
 
     public AutoPinch()
     {
@@ -62,18 +59,31 @@ namespace Dagobert
           ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0f.Scale(), 0f.Scale()));
           ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f.Scale());
           ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, size);
-          ImGui.Begin($"###DesynthAll{node->NodeId}", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNavFocus
+          ImGui.Begin($"###AutoPinch{node->NodeId}", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNavFocus
               | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
         }
 
-        if (ImGui.Button("Test"))
+        if (_pinching)
         {
-          await PinchAll();
+          if (ImGui.Button("Cancel"))
+          {
+            _pinching = false;
+          }
+        }
+        else
+        {
+          if (ImGui.Button("Auto Pinch"))
+          {
+            _pinching = true;
+            await PinchAll();
+            _pinching = false;
+          }
         }
       }
-      catch
+      catch(Exception ex)
       {
-
+        Svc.Log.Error(ex, "Error while auto pinching");
+        _pinching = false;
       }
     }
 
@@ -89,11 +99,16 @@ namespace Dagobert
 
       for (int i = 0; i < num; i++)
       {
+        if (!_pinching)
+          return;
+
         Svc.Log.Info($"Pinching item #{i}");
 
         unsafe
         {
           var addon = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSellList");
+          if (addon == null)
+            throw new Exception($"Item #{i}: RetainerSellList is null");
           Callback.Fire(&addon->AtkUnitBase, true, 0, i, 1); // open context menu
                                                              // 0, 0, 1 -> open context menu, second 0 is item index
         }
@@ -103,6 +118,8 @@ namespace Dagobert
         unsafe
         {
           var cm = (AddonContextMenu*)Svc.GameGui.GetAddonByName("ContextMenu");
+          if (cm == null)
+            throw new Exception($"Item #{i}: ContextMenu is null");
           Callback.Fire(&cm->AtkUnitBase, true, 0, 0, 0); // open retainersell
         }
 
@@ -111,6 +128,8 @@ namespace Dagobert
         unsafe
         {
           var retainerSell = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSell");
+          if (retainerSell == null)
+            throw new Exception($"Item #{i}: RetainerSell is null");
           Callback.Fire(&retainerSell->AtkUnitBase, true, 4); // open mb prices
         }
 
@@ -123,12 +142,14 @@ namespace Dagobert
             Task.Delay(10);
           } // wait until price received
         });
-        var p = _newPrice.Value;
+        var p = _newPrice!.Value;
         _newPrice = null;
 
         unsafe
         {
           var itemSearchResult = (AddonItemSearchResult*)Svc.GameGui.GetAddonByName("ItemSearchResult");
+          if (itemSearchResult == null)
+            throw new Exception($"Item #{i}: ItemSearchResult is null");
           Callback.Fire(&itemSearchResult->AtkUnitBase, true, -1); // close itemsearchresult
         }
 
@@ -137,6 +158,8 @@ namespace Dagobert
         unsafe
         { 
           var retainerSell = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSell");
+          if (retainerSell == null)
+            throw new Exception($"Item #{i}: RetainerSell 2 is null");
           Callback.Fire(&retainerSell->AtkUnitBase, true, 2, (int)p); // input new price
           Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // close retainersell
         }
