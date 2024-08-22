@@ -2,10 +2,10 @@
   "Author": "SHOEGAZEssb",
   "Name": "Dagobert",
   "Punchline": "Penny pinching to the extreme",
-  "Description": "Automates market board penny pinchinng",
+  "Description": "Automates market board penny pinching",
   "ApplicableVersion": "any",
   "Tags": [
-    "market"
+    "Utility"
   ],
   "RepoUrl": "https://github.com/SHOEGAZEssb/Dagobert",
   "InternalName": "Dagobert",
