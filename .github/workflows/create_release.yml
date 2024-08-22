@@ -1,0 +1,21 @@
+name: Create Release and Update Repository
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    uses: SHOEGAZEssb/DalamudPluginRepo/.github/workflows/reusable_create_release.yml@main
+    with:
+      internal_name: Dagobert
+      solution_name: Dagobert
+      build_configuration: Release
+      personal_plugin_repo: SHOEGAZEssb/DalamudPluginRepo
+      personal_plugin_repo_branch: main
+    secrets: inherit
