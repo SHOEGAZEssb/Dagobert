@@ -35,7 +35,7 @@ namespace Dagobert
           if (addon == null || !addon->AtkUnitBase.IsVisible)
             return;
 
-          var node = addon->AtkUnitBase.UldManager.NodeList[12];
+          var node = addon->AtkUnitBase.UldManager.NodeList[17];
 
           if (node == null)
             return;
@@ -46,7 +46,7 @@ namespace Dagobert
 
           ImGuiHelpers.ForceNextWindowMainViewport();
           var pos = position + size with { Y = 0 };
-          pos.X += 12f;
+          pos.X -= size.X;
           ImGuiHelpers.SetNextWindowPosRelativeMainViewport(pos);
 
 
@@ -109,7 +109,7 @@ namespace Dagobert
           var addon = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSellList");
           if (addon == null)
             throw new Exception($"Item #{i}: RetainerSellList is null");
-          Callback.Fire(&addon->AtkUnitBase, true, 0, i, 1); // open context menu
+          Callback.Fire(&addon->AtkUnitBase, false, 0, i, 1); // open context menu
                                                              // 0, 0, 1 -> open context menu, second 0 is item index
         }
 
@@ -120,7 +120,7 @@ namespace Dagobert
           var cm = (AddonContextMenu*)Svc.GameGui.GetAddonByName("ContextMenu");
           if (cm == null)
             throw new Exception($"Item #{i}: ContextMenu is null");
-          Callback.Fire(&cm->AtkUnitBase, true, 0, 0, 0); // open retainersell
+          Callback.Fire(&cm->AtkUnitBase, false, 0, 0, 0); // open retainersell
         }
 
         await Task.Delay(2500);
@@ -130,7 +130,7 @@ namespace Dagobert
           var retainerSell = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSell");
           if (retainerSell == null)
             throw new Exception($"Item #{i}: RetainerSell is null");
-          Callback.Fire(&retainerSell->AtkUnitBase, true, 4); // open mb prices
+          Callback.Fire(&retainerSell->AtkUnitBase, false, 4); // open mb prices
         }
 
         await Task.Delay(500);
@@ -156,11 +156,11 @@ namespace Dagobert
         await Task.Delay(100);
 
         unsafe
-        { 
+        {
           var retainerSell = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSell");
           if (retainerSell == null)
             throw new Exception($"Item #{i}: RetainerSell 2 is null");
-          Callback.Fire(&retainerSell->AtkUnitBase, true, 2, (int)p); // input new price
+          Callback.Fire(&retainerSell->AtkUnitBase, false, 2, (int)p); // input new price
           Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // close retainersell
         }
 
