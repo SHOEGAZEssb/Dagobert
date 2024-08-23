@@ -18,6 +18,8 @@ public class Configuration : IPluginConfiguration
 
   public ShiftBehaviour ShiftBehaviour { get; set; } = ShiftBehaviour.DontReopenRetainer;
 
+  public int GetAddonMaxTimeoutMS { get; set; } = 5000;
+
   // the below exist just to make saving less cumbersome
   public void Save()
   {

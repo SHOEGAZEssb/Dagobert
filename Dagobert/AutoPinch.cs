@@ -9,6 +9,7 @@ using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Dagobert
@@ -168,36 +169,35 @@ namespace Dagobert
 
         Svc.Log.Info($"Pinching item #{i}");
 
+        var retainerSellList = await WaitForAddon("RetainerSellList");
         unsafe
         {
-          var addon = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSellList");
+          var addon = (AddonRetainerSell*)retainerSellList;
           if (addon == null)
             throw new Exception($"Item #{i}: RetainerSellList is null");
           Callback.Fire(&addon->AtkUnitBase, false, 0, i, 1); // open context menu
                                                               // 0, 0, 1 -> open context menu, second 0 is item index
         }
 
-        await Task.Delay(100);
-
+        var contextMenu = await WaitForAddon("ContextMenu");
         unsafe
         {
-          var cm = (AddonContextMenu*)Svc.GameGui.GetAddonByName("ContextMenu");
+          var cm = (AddonContextMenu*)contextMenu;
           if (cm == null)
             throw new Exception($"Item #{i}: ContextMenu is null");
           Callback.Fire(&cm->AtkUnitBase, false, 0, 0, 0); // open retainersell
         }
 
-        await Task.Delay(2500);
+        await Task.Delay(2500); // market board rate limiting delay
 
+        var retainerSell = await WaitForAddon("RetainerSell");
         unsafe
         {
-          var retainerSell = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSell");
-          if (retainerSell == null)
+          var rs = (AddonRetainerSell*)retainerSell;
+          if (rs == null)
             throw new Exception($"Item #{i}: RetainerSell is null");
-          Callback.Fire(&retainerSell->AtkUnitBase, false, 4); // open mb prices
+          Callback.Fire(&rs->AtkUnitBase, false, 4); // open mb prices
         }
-
-        await Task.Delay(500);
 
         await Task.Run(() =>
         {
@@ -209,65 +209,61 @@ namespace Dagobert
         var p = _newPrice!.Value;
         _newPrice = null;
 
+        var itemSearchResult = await WaitForAddon("ItemSearchResult");
         unsafe
         {
-          var itemSearchResult = (AddonItemSearchResult*)Svc.GameGui.GetAddonByName("ItemSearchResult");
-          if (itemSearchResult == null)
+          var isr = (AddonItemSearchResult*)itemSearchResult;
+          if (isr == null)
             throw new Exception($"Item #{i}: ItemSearchResult is null");
-          Callback.Fire(&itemSearchResult->AtkUnitBase, true, -1); // close itemsearchresult
+          Callback.Fire(&isr->AtkUnitBase, true, -1); // close itemsearchresult
         }
 
-        await Task.Delay(100);
-
+        var retainerSell2 = await WaitForAddon("RetainerSell");
         unsafe
         {
-          var retainerSell = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSell");
-          if (retainerSell == null)
+          var rs = (AddonRetainerSell*)retainerSell2;
+          if (rs == null)
             throw new Exception($"Item #{i}: RetainerSell 2 is null");
-          Callback.Fire(&retainerSell->AtkUnitBase, false, 2, (int)p); // input new price
-          Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // close retainersell
+          Callback.Fire(&rs->AtkUnitBase, false, 2, (int)p); // input new price
+          Callback.Fire(&rs->AtkUnitBase, true, 0); // close retainersell
         }
-
-        await Task.Delay(100);
       }
     }
 
     private async Task ReopenRetainerSellList(ulong retainerID)
     {
+      var retainerSellList = await WaitForAddon("RetainerSellList");
       unsafe
       {
-        var retainerSellList = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSellList");
-        if (retainerSellList == null)
+        var rsl = (AddonRetainerSell*)retainerSellList;
+        if (rsl == null)
           throw new Exception("Reopen Retainer: RetainerSellList is null");
-        Callback.Fire(&retainerSellList->AtkUnitBase, true, -1); // close RetainerSellList
+        Callback.Fire(&rsl->AtkUnitBase, true, -1); // close RetainerSellList
       }
 
-      await Task.Delay(500);
-
+      var selectString = await WaitForAddon("SelectString");
       unsafe
       {
-        var selectString = (AddonSelectString*)Svc.GameGui.GetAddonByName("SelectString");
-        if (selectString == null)
+        var ss = (AddonSelectString*)selectString;
+        if (ss == null)
           throw new Exception("Reopen Retainer: SelectString is null");
-        Callback.Fire(&selectString->AtkUnitBase, true, 12); // close SelectString
+        Callback.Fire(&ss->AtkUnitBase, true, 12); // close SelectString
       }
 
-      await Task.Delay(500);
-
+      var talk = await WaitForAddon("Talk");
       unsafe
       {
-        var talk = (AddonTalk*)Svc.GameGui.GetAddonByName("Talk");
-        if (talk == null)
+        var t = (AddonTalk*)talk;
+        if (t == null)
           throw new Exception("Reopen Retainer: Talk is null");
-        Callback.Fire(&talk->AtkUnitBase, true, 1); // close Talk
+        Callback.Fire(&t->AtkUnitBase, true, 1); // close Talk
       }
 
-      await Task.Delay(1500);
-
+      var retainerList = await WaitForAddon("RetainerList");
       unsafe
       {
-        var retainerList = (AddonRetainerList*)Svc.GameGui.GetAddonByName("RetainerList");
-        if (retainerList == null)
+        var rs = (AddonRetainerList*)retainerList;
+        if (rs == null)
           throw new Exception("Reopen Retainer: RetainerList is null");
 
         var rm = RetainerManager.Instance();
@@ -285,33 +281,29 @@ namespace Dagobert
         if (retainerFound)
         {
           Svc.Log.Info($"Reopening retainer with id: {i}");
-          Callback.Fire(&retainerList->AtkUnitBase, true, 2, i); // select Retainer
+          Callback.Fire(&rs->AtkUnitBase, true, 2, i); // select Retainer
         }
         else
           throw new Exception("No valid retainer found to reopen");
       }
 
-      await Task.Delay(1000);
-
+      var talk2 = await WaitForAddon("Talk");
       unsafe
       {
-        var talk = (AddonTalk*)Svc.GameGui.GetAddonByName("Talk");
-        if (talk == null)
+        var t = (AddonTalk*)talk2;
+        if (t == null)
           throw new Exception("Reopen Retainer: Talk 2 is null");
-        Callback.Fire(&talk->AtkUnitBase, true, 1); // close Talk
+        Callback.Fire(&t->AtkUnitBase, true, 1); // close Talk
       }
 
-      await Task.Delay(500);
-
+      var selectString2 = await WaitForAddon("SelectString");
       unsafe
       {
-        var selectString = (AddonSelectString*)Svc.GameGui.GetAddonByName("SelectString");
-        if (selectString == null)
+        var ss = (AddonSelectString*)selectString2;
+        if (ss == null)
           throw new Exception("Reopen Retainer: SelectString is null");
-        Callback.Fire(&selectString->AtkUnitBase, true, 2); // open sell
+        Callback.Fire(&ss->AtkUnitBase, true, 2); // open sell
       }
-
-      await Task.Delay(500);
     }
 
     private void MBHandler_NewPriceReceived(object? sender, NewPriceEventArgs e)
@@ -344,6 +336,44 @@ namespace Dagobert
       }
 
       return scale;
+    }
+
+    private static async Task<nint> WaitForAddon(string addonName)
+    {
+      return await WaitForAddon(addonName, TimeSpan.FromMilliseconds(Plugin.Configuration.GetAddonMaxTimeoutMS));
+    }
+
+    private static async Task<nint> WaitForAddon(string addonName, TimeSpan timeout)
+    {
+      using CancellationTokenSource cts = new();
+      var tryGetAddonTask = TryGetAddon(addonName, cts.Token);
+      var completedTask = await Task.WhenAny(tryGetAddonTask, Task.Delay(timeout));
+
+      if (completedTask == tryGetAddonTask)
+        return tryGetAddonTask.Result;
+      else
+      {
+        cts.Cancel();
+        return nint.Zero;
+      }
+    }
+
+    private static async Task<nint> TryGetAddon(string addonName, CancellationToken token)
+    {
+      nint addon = 0;
+      while (addon == nint.Zero && !token.IsCancellationRequested)
+      {
+        unsafe
+        {
+          var addonTemp = (AtkUnitBase*)Svc.GameGui.GetAddonByName(addonName);
+          if (addonTemp != null && addonTemp->IsReady && addonTemp->IsVisible)
+            addon = (nint)addonTemp;
+
+        }
+        await Task.Delay(10, CancellationToken.None);
+      }
+
+      return addon;
     }
   }
 }
