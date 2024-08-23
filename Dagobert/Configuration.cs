@@ -20,6 +20,8 @@ public class Configuration : IPluginConfiguration
 
   public int GetAddonMaxTimeoutMS { get; set; } = 5000;
 
+  public int GetMBPricesDelayMS { get; set; } = 3000;
+
   // the below exist just to make saving less cumbersome
   public void Save()
   {

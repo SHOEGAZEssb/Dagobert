@@ -56,8 +56,6 @@ namespace Dagobert
           var size = new Vector2(node->Width, node->Height) * scale;
 
           ImGuiHelpers.ForceNextWindowMainViewport();
-          //var pos = position + size with { Y = 0 };
-          //pos.X -= size.X;
           ImGuiHelpers.SetNextWindowPosRelativeMainViewport(position);
 
           ImGui.PushStyleColor(ImGuiCol.WindowBg, 0);
@@ -111,7 +109,7 @@ namespace Dagobert
           ImGui.BeginDisabled();
 
         if (ImGui.Button("Auto Pinch"))
-          _taskManager.Enqueue(() => PinchAll());
+          _taskManager.Enqueue(() => _ = PinchAll());
         if (ImGui.IsItemHovered())
         {
           string tooltipText;
@@ -181,7 +179,7 @@ namespace Dagobert
         {
           var addon = (AddonRetainerSell*)retainerSellList;
           if (addon == null)
-            throw new Exception($"Item #{i}: RetainerSellList is null");
+            throw new Exception($"Item #{i}: RetainerSellList is null");        
           Callback.Fire(&addon->AtkUnitBase, false, 0, i, 1); // open context menu
                                                               // 0, 0, 1 -> open context menu, second 0 is item index
         }
@@ -195,7 +193,7 @@ namespace Dagobert
           Callback.Fire(&cm->AtkUnitBase, false, 0, 0, 0); // open retainersell
         }
 
-        await Task.Delay(2500); // market board rate limiting delay
+        await Task.Delay(TimeSpan.FromMilliseconds(Plugin.Configuration.GetMBPricesDelayMS)); // market board rate limiting delay
 
         var retainerSell = await WaitForAddon("RetainerSell");
         unsafe
@@ -231,7 +229,13 @@ namespace Dagobert
           var rs = (AddonRetainerSell*)retainerSell2;
           if (rs == null)
             throw new Exception($"Item #{i}: RetainerSell 2 is null");
-          Callback.Fire(&rs->AtkUnitBase, false, 2, (int)p); // input new price
+          Callback.Fire(&rs->AtkUnitBase, false, 2, (int)p); // input new price       
+        }
+
+        await Task.Delay(100);
+        unsafe
+        {
+          var rs = (AddonRetainerSell*)retainerSell2;
           Callback.Fire(&rs->AtkUnitBase, true, 0); // close retainersell
         }
       }
@@ -384,7 +388,6 @@ namespace Dagobert
         await Task.Delay(10, CancellationToken.None);
       }
 
-      await Task.Delay(100, CancellationToken.None); // safety
       return addon;
     }
   }
