@@ -1,3 +1,4 @@
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility;
 using ECommons.Automation;
 using ECommons.DalamudServices;
@@ -7,22 +8,28 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
-using Lumina.Excel.GeneratedSheets2;
 using System;
 using System.Threading.Tasks;
 
 namespace Dagobert
 {
-  internal class AutoPinch
+  internal class AutoPinch : IDisposable
   {
     private readonly MarketBoardHandler _mbHandler;
     private uint? _newPrice;
-    private bool _pinching = false;
+    private bool _shouldPinch = false;
+    private bool _currentlyPinching = false;
 
     public AutoPinch()
     {
       _mbHandler = new MarketBoardHandler();
       _mbHandler.NewPriceReceived += MBHandler_NewPriceReceived;
+    }
+
+    public void Dispose()
+    {
+      _mbHandler.NewPriceReceived -= MBHandler_NewPriceReceived;
+      _mbHandler.Dispose();
     }
 
     public async void Draw()
@@ -32,7 +39,7 @@ namespace Dagobert
         unsafe
         {
           var addon = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSellList");
-          if (addon == null || !addon->AtkUnitBase.IsVisible)
+          if (addon == null || !addon->AtkUnitBase.IsVisible || !addon->IsReady)
             return;
 
           var node = addon->AtkUnitBase.UldManager.NodeList[17];
@@ -63,27 +70,68 @@ namespace Dagobert
               | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
         }
 
-        if (_pinching)
+        await DrawAutoPinchButton();
+      }
+      catch (Exception ex)
+      {
+        _shouldPinch = false;
+        _currentlyPinching = false;
+        Svc.Log.Error(ex, "Error while auto pinching");
+        Svc.Chat.PrintError($"Error while auto pinching: {ex.Message}");
+      }
+    }
+
+    private async Task DrawAutoPinchButton()
+    {
+      if (_shouldPinch)
+      {
+        if (ImGui.Button("Cancel"))
+          _shouldPinch = false;
+        if (ImGui.IsItemHovered())
         {
-          if (ImGui.Button("Cancel"))
-          {
-            _pinching = false;
-          }
-        }
-        else
-        {
-          if (ImGui.Button("Auto Pinch"))
-          {
-            _pinching = true;
-            await PinchAll();
-            _pinching = false;
-          }
+          ImGui.BeginTooltip();
+          ImGui.SetTooltip("Cancels the auto pinching process after the current item");
+          ImGui.EndTooltip();
         }
       }
-      catch(Exception ex)
+      else
       {
-        Svc.Log.Error(ex, "Error while auto pinching");
-        _pinching = false;
+        bool disabled = _currentlyPinching || _shouldPinch;
+        if (disabled)
+          ImGui.BeginDisabled();
+
+        if (ImGui.Button("Auto Pinch"))
+        {
+          _currentlyPinching = true;
+          _shouldPinch = true;
+          await PinchAll();
+          _shouldPinch = false;
+          _currentlyPinching = false;
+          Svc.Chat.Print("Auto pinching was successfull");
+        }
+        if (ImGui.IsItemHovered())
+        {
+          string tooltipText;
+          if (disabled)
+            tooltipText = "Canceling auto pinch...";
+          else
+          {
+            tooltipText = "Starts auto pinching\r\n";
+            var shiftHeld = Plugin.KeyState[VirtualKey.SHIFT];
+            if ((Plugin.Configuration.ShiftBehaviour == ShiftBehaviour.ReopenRetainer && shiftHeld) ||
+                (Plugin.Configuration.ShiftBehaviour == ShiftBehaviour.DontReopenRetainer && !shiftHeld))
+              tooltipText += "Retainer will be reopened";
+            else
+              tooltipText += "Retainer will not be reopened";
+          }
+
+          ImGui.BeginTooltip();
+          ImGui.SetTooltip(tooltipText);
+          ImGui.EndTooltip();
+        }
+
+        if (disabled)
+          ImGui.EndDisabled();
       }
     }
 
@@ -91,7 +139,9 @@ namespace Dagobert
     {
       int num = 0;
 
-      if (Plugin.Configuration.ReopenRetainer)
+      var shiftHeld = Plugin.KeyState[VirtualKey.SHIFT];
+      if ((Plugin.Configuration.ShiftBehaviour == ShiftBehaviour.ReopenRetainer && shiftHeld)
+        || (Plugin.Configuration.ShiftBehaviour == ShiftBehaviour.DontReopenRetainer && !shiftHeld))
       {
         ulong retainerId;
         unsafe
@@ -113,7 +163,7 @@ namespace Dagobert
 
       for (int i = 0; i < num; i++)
       {
-        if (!_pinching)
+        if (!_shouldPinch)
           return;
 
         Svc.Log.Info($"Pinching item #{i}");
@@ -124,7 +174,7 @@ namespace Dagobert
           if (addon == null)
             throw new Exception($"Item #{i}: RetainerSellList is null");
           Callback.Fire(&addon->AtkUnitBase, false, 0, i, 1); // open context menu
-                                                             // 0, 0, 1 -> open context menu, second 0 is item index
+                                                              // 0, 0, 1 -> open context menu, second 0 is item index
         }
 
         await Task.Delay(100);

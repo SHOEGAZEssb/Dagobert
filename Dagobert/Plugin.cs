@@ -1,7 +1,6 @@
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using System.IO;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using Dagobert.Windows;
@@ -14,6 +13,7 @@ public sealed class Plugin : IDalamudPlugin
   [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
   [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
   [PluginService] public static IMarketBoard MarketBoard { get; private set; } = null!;
+  [PluginService] public static IKeyState KeyState { get; private set; } = null!;
 
   public static Configuration Configuration { get; private set; }
 
@@ -30,7 +30,7 @@ public sealed class Plugin : IDalamudPlugin
 
     CommandManager.AddHandler("/dagobert", new CommandInfo(OnDagobertCommand)
     {
-      HelpMessage = "A useful message to display in /xlhelp"
+      HelpMessage = "Opens the Dagobert configuration window"
     });
 
     PluginInterface.UiBuilder.Draw += DrawUI;
@@ -45,10 +45,9 @@ public sealed class Plugin : IDalamudPlugin
 
   public void Dispose()
   {
+    _autoPinch.Dispose();
     WindowSystem.RemoveAllWindows();
-
     ConfigWindow.Dispose();
-
     CommandManager.RemoveHandler("/dagobert");
     ECommonsMain.Dispose();
   }

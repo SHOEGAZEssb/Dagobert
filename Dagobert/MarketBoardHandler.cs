@@ -4,7 +4,6 @@ using ECommons.DalamudServices;
 using ECommons.EzHookManager;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI;
-using ImGuiNET;
 using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Linq;
@@ -12,7 +11,7 @@ using System.Runtime.InteropServices;
 
 namespace Dagobert
 {
-  internal unsafe class MarketBoardHandler
+  internal unsafe class MarketBoardHandler : IDisposable
   {
     enum PennyPincherPacketType
     {
@@ -35,10 +34,10 @@ namespace Dagobert
     private bool useHq;
     private bool itemHq;
 
-    public uint NewPrice
+    private uint NewPrice
     {
       get => _newPrice;
-      private set
+      set
       {
         _newPrice = value;
         NewPriceReceived?.Invoke(this, new NewPriceEventArgs(NewPrice));
@@ -58,6 +57,13 @@ namespace Dagobert
       _marketBoardItemRequestStartHook.Enable();
       _retainerSellSetup = new EzHook<AddonOnSetup>("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC ?? 4C 89 74 24 ?? 49 8B F0 44 8B F2", AddonRetainerSell_OnSetup);
       _retainerSellSetup.Enable();
+    }
+
+    public void Dispose()
+    {
+      Plugin.MarketBoard.OfferingsReceived -= MarketBoardOnOfferingsReceived;
+      _marketBoardItemRequestStartHook.Disable();
+      _retainerSellSetup.Disable();
     }
 
     private void MarketBoardOnOfferingsReceived(IMarketBoardCurrentOfferings currentOfferings)
@@ -105,15 +111,12 @@ namespace Dagobert
 
     private void ParseNetworkEvent(IntPtr dataPtr, PennyPincherPacketType packetType)
     {
-      // if (!Data.IsDataReady) return;
       if (packetType == PennyPincherPacketType.MarketBoardItemRequestStart)
       {
         newRequest = true;
-
         useHq = Plugin.Configuration.HQ && itemHq;
       }
     }
-
 
     private unsafe IntPtr AddonRetainerSell_OnSetup(IntPtr addon, uint a2, IntPtr dataPtr)
     {
