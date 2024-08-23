@@ -1,6 +1,7 @@
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility;
 using ECommons.Automation;
+using ECommons.Automation.LegacyTaskManager;
 using ECommons.DalamudServices;
 using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -20,6 +21,7 @@ namespace Dagobert
     private uint? _newPrice;
     private bool _shouldPinch = false;
     private bool _currentlyPinching = false;
+    private readonly TaskManager _taskManager = new TaskManager();
 
     public AutoPinch()
     {
@@ -33,10 +35,11 @@ namespace Dagobert
       _mbHandler.Dispose();
     }
 
-    public async void Draw()
+    public async Task Draw()
     {
       try
       {
+        float oldSize = 0;
         unsafe
         {
           var addon = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSellList");
@@ -53,13 +56,12 @@ namespace Dagobert
           var size = new Vector2(node->Width, node->Height) * scale;
 
           ImGuiHelpers.ForceNextWindowMainViewport();
-          var pos = position + size with { Y = 0 };
-          pos.X -= size.X;
-          ImGuiHelpers.SetNextWindowPosRelativeMainViewport(pos);
-
+          //var pos = position + size with { Y = 0 };
+          //pos.X -= size.X;
+          ImGuiHelpers.SetNextWindowPosRelativeMainViewport(position);
 
           ImGui.PushStyleColor(ImGuiCol.WindowBg, 0);
-          var oldSize = ImGui.GetFont().Scale;
+          oldSize = ImGui.GetFont().Scale;
           ImGui.GetFont().Scale *= scale.X;
           ImGui.PushFont(ImGui.GetFont());
           ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0f.Scale());
@@ -71,18 +73,25 @@ namespace Dagobert
               | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
         }
 
-        await DrawAutoPinchButton();
+        DrawAutoPinchButton();
+
+        ImGui.End();
+        ImGui.PopStyleVar(5);
+        ImGui.GetFont().Scale = oldSize;
+        ImGui.PopFont();
+        ImGui.PopStyleColor();
       }
       catch (Exception ex)
       {
         _shouldPinch = false;
         _currentlyPinching = false;
+        _taskManager.Abort();
         Svc.Log.Error(ex, "Error while auto pinching");
         Svc.Chat.PrintError($"Error while auto pinching: {ex.Message}");
       }
     }
 
-    private async Task DrawAutoPinchButton()
+    private void DrawAutoPinchButton()
     {
       if (_shouldPinch)
       {
@@ -102,14 +111,7 @@ namespace Dagobert
           ImGui.BeginDisabled();
 
         if (ImGui.Button("Auto Pinch"))
-        {
-          _currentlyPinching = true;
-          _shouldPinch = true;
-          await PinchAll();
-          _shouldPinch = false;
-          _currentlyPinching = false;
-          Svc.Chat.Print("Auto pinching was successfull");
-        }
+          _taskManager.Enqueue(() => PinchAll());
         if (ImGui.IsItemHovered())
         {
           string tooltipText;
@@ -138,6 +140,8 @@ namespace Dagobert
 
     private async Task PinchAll()
     {
+      _currentlyPinching = true;
+      _shouldPinch = true;
       int num = 0;
 
       var shiftHeld = Plugin.KeyState[VirtualKey.SHIFT];
@@ -165,7 +169,10 @@ namespace Dagobert
       for (int i = 0; i < num; i++)
       {
         if (!_shouldPinch)
+        {
+          _currentlyPinching = false;
           return;
+        }
 
         Svc.Log.Info($"Pinching item #{i}");
 
@@ -228,6 +235,10 @@ namespace Dagobert
           Callback.Fire(&rs->AtkUnitBase, true, 0); // close retainersell
         }
       }
+
+      _shouldPinch = false;
+      _currentlyPinching = false;
+      Svc.Chat.Print("Auto pinching was successfull");
     }
 
     private async Task ReopenRetainerSellList(ulong retainerID)
@@ -373,6 +384,7 @@ namespace Dagobert
         await Task.Delay(10, CancellationToken.None);
       }
 
+      await Task.Delay(100, CancellationToken.None); // safety
       return addon;
     }
   }
