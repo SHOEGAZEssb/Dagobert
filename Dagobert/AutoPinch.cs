@@ -10,6 +10,7 @@ using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -35,7 +36,7 @@ namespace Dagobert
       _mbHandler.Dispose();
     }
 
-    public async Task Draw()
+    public void Draw()
     {
       try
       {
@@ -114,16 +115,11 @@ namespace Dagobert
         {
           string tooltipText;
           if (disabled)
-            tooltipText = "Canceling auto pinch...";
+            tooltipText = "Canceling auto pinch after current item...";
           else
           {
-            tooltipText = "Starts auto pinching\r\n";
-            var shiftHeld = Plugin.KeyState[VirtualKey.SHIFT];
-            if ((Plugin.Configuration.ShiftBehaviour == ShiftBehaviour.ReopenRetainer && shiftHeld) ||
-                (Plugin.Configuration.ShiftBehaviour == ShiftBehaviour.DontReopenRetainer && !shiftHeld))
-              tooltipText += "Retainer will be reopened";
-            else
-              tooltipText += "Retainer will not be reopened";
+            tooltipText = "Starts auto pinching\r\n" +
+                          "Please do not interact with the game while this process is running";
           }
 
           ImGui.BeginTooltip();
@@ -140,28 +136,17 @@ namespace Dagobert
     {
       _currentlyPinching = true;
       _shouldPinch = true;
+
       int num = 0;
-
-      var shiftHeld = Plugin.KeyState[VirtualKey.SHIFT];
-      if ((Plugin.Configuration.ShiftBehaviour == ShiftBehaviour.ReopenRetainer && shiftHeld)
-        || (Plugin.Configuration.ShiftBehaviour == ShiftBehaviour.DontReopenRetainer && !shiftHeld))
-      {
-        ulong retainerId;
-        unsafe
-        {
-          var rm = RetainerManager.Instance();
-          var r = rm->GetActiveRetainer();
-          retainerId = r->RetainerId;
-        }
-
-        await ReopenRetainerSellList(retainerId);
-      }
-
+      var retainerSellList = await WaitForAddon("RetainerSellList");
       unsafe
       {
-        var rm = RetainerManager.Instance();
-        var r = rm->GetActiveRetainer();
-        num = r->MarketItemCount;
+        var rsl = (AddonRetainerSell*)retainerSellList;
+        if (rsl == null)
+          throw new Exception("RetainerSellList is null");
+        var listNode = (AtkComponentNode*)rsl->AtkUnitBase.UldManager.NodeList[10];
+        var listComponent = (AtkComponentList*)listNode->Component;
+        num = listComponent->ListLength;
       }
 
       for (int i = 0; i < num; i++)
@@ -173,16 +158,18 @@ namespace Dagobert
         }
 
         Svc.Log.Info($"Pinching item #{i}");
-
-        var retainerSellList = await WaitForAddon("RetainerSellList");
+        
         unsafe
         {
           var addon = (AddonRetainerSell*)retainerSellList;
-          if (addon == null)
-            throw new Exception($"Item #{i}: RetainerSellList is null");        
+          var listNode = (AtkComponentNode*)addon->AtkUnitBase.UldManager.NodeList[10];
+          var listComponent = (AtkComponentList*)listNode->Component;
+          listComponent->SelectItem(i, true);
           Callback.Fire(&addon->AtkUnitBase, false, 0, i, 1); // open context menu
                                                               // 0, 0, 1 -> open context menu, second 0 is item index
         }
+
+        await Task.Delay(50);
 
         var contextMenu = await WaitForAddon("ContextMenu");
         unsafe
@@ -190,7 +177,7 @@ namespace Dagobert
           var cm = (AddonContextMenu*)contextMenu;
           if (cm == null)
             throw new Exception($"Item #{i}: ContextMenu is null");
-          Callback.Fire(&cm->AtkUnitBase, false, 0, 0, 0); // open retainersell
+          Callback.Fire(&cm->AtkUnitBase, true, 0, 0, 0); // open retainersell
         }
 
         await Task.Delay(TimeSpan.FromMilliseconds(Plugin.Configuration.GetMBPricesDelayMS)); // market board rate limiting delay
@@ -201,7 +188,7 @@ namespace Dagobert
           var rs = (AddonRetainerSell*)retainerSell;
           if (rs == null)
             throw new Exception($"Item #{i}: RetainerSell is null");
-          Callback.Fire(&rs->AtkUnitBase, false, 4); // open mb prices
+          Callback.Fire(&rs->AtkUnitBase, true, 4); // open mb prices
         }
 
         await Task.Run(() =>
@@ -214,6 +201,8 @@ namespace Dagobert
         var p = _newPrice!.Value;
         _newPrice = null;
 
+        await Task.Delay(50);
+
         var itemSearchResult = await WaitForAddon("ItemSearchResult");
         unsafe
         {
@@ -223,102 +212,28 @@ namespace Dagobert
           Callback.Fire(&isr->AtkUnitBase, true, -1); // close itemsearchresult
         }
 
-        var retainerSell2 = await WaitForAddon("RetainerSell");
+        await Task.Delay(50);
+
         unsafe
         {
-          var rs = (AddonRetainerSell*)retainerSell2;
-          if (rs == null)
-            throw new Exception($"Item #{i}: RetainerSell 2 is null");
-          Callback.Fire(&rs->AtkUnitBase, false, 2, (int)p); // input new price       
+          var rs = (AddonRetainerSell*)retainerSell;
+          Callback.Fire(&rs->AtkUnitBase, true, 2, (int)p); // input new price       
         }
 
         await Task.Delay(100);
+
         unsafe
         {
-          var rs = (AddonRetainerSell*)retainerSell2;
+          var rs = (AddonRetainerSell*)retainerSell;
           Callback.Fire(&rs->AtkUnitBase, true, 0); // close retainersell
         }
+
+        await Task.Delay(100);
       }
 
       _shouldPinch = false;
       _currentlyPinching = false;
       Svc.Chat.Print("Auto pinching was successfull");
-    }
-
-    private async Task ReopenRetainerSellList(ulong retainerID)
-    {
-      var retainerSellList = await WaitForAddon("RetainerSellList");
-      unsafe
-      {
-        var rsl = (AddonRetainerSell*)retainerSellList;
-        if (rsl == null)
-          throw new Exception("Reopen Retainer: RetainerSellList is null");
-        Callback.Fire(&rsl->AtkUnitBase, true, -1); // close RetainerSellList
-      }
-
-      var selectString = await WaitForAddon("SelectString");
-      unsafe
-      {
-        var ss = (AddonSelectString*)selectString;
-        if (ss == null)
-          throw new Exception("Reopen Retainer: SelectString is null");
-        Callback.Fire(&ss->AtkUnitBase, true, 12); // close SelectString
-      }
-
-      var talk = await WaitForAddon("Talk");
-      unsafe
-      {
-        var t = (AddonTalk*)talk;
-        if (t == null)
-          throw new Exception("Reopen Retainer: Talk is null");
-        Callback.Fire(&t->AtkUnitBase, true, 1); // close Talk
-      }
-
-      var retainerList = await WaitForAddon("RetainerList");
-      unsafe
-      {
-        var rs = (AddonRetainerList*)retainerList;
-        if (rs == null)
-          throw new Exception("Reopen Retainer: RetainerList is null");
-
-        var rm = RetainerManager.Instance();
-        uint i = 0;
-        bool retainerFound = false;
-        for (; i < rm->GetRetainerCount(); ++i)
-        {
-          if (rm->GetRetainerBySortedIndex(i)->RetainerId == retainerID)
-          {
-            retainerFound = true;
-            break;
-          }
-        }
-
-        if (retainerFound)
-        {
-          Svc.Log.Info($"Reopening retainer with id: {i}");
-          Callback.Fire(&rs->AtkUnitBase, true, 2, i); // select Retainer
-        }
-        else
-          throw new Exception("No valid retainer found to reopen");
-      }
-
-      var talk2 = await WaitForAddon("Talk");
-      unsafe
-      {
-        var t = (AddonTalk*)talk2;
-        if (t == null)
-          throw new Exception("Reopen Retainer: Talk 2 is null");
-        Callback.Fire(&t->AtkUnitBase, true, 1); // close Talk
-      }
-
-      var selectString2 = await WaitForAddon("SelectString");
-      unsafe
-      {
-        var ss = (AddonSelectString*)selectString2;
-        if (ss == null)
-          throw new Exception("Reopen Retainer: SelectString is null");
-        Callback.Fire(&ss->AtkUnitBase, true, 2); // open sell
-      }
     }
 
     private void MBHandler_NewPriceReceived(object? sender, NewPriceEventArgs e)
@@ -385,7 +300,7 @@ namespace Dagobert
             addon = (nint)addonTemp;
 
         }
-        await Task.Delay(10, CancellationToken.None);
+        await Task.Delay(50, CancellationToken.None);
       }
 
       return addon;
