@@ -34,7 +34,7 @@ namespace Dagobert
     private bool useHq;
     private bool itemHq;
 
-    private uint NewPrice
+    private int NewPrice
     {
       get => _newPrice;
       set
@@ -43,7 +43,7 @@ namespace Dagobert
         NewPriceReceived?.Invoke(this, new NewPriceEventArgs(NewPrice));
       }
     }
-    private uint _newPrice;
+    private int _newPrice;
 
     public event EventHandler<NewPriceEventArgs> NewPriceReceived;
 
@@ -83,11 +83,14 @@ namespace Dagobert
           i++;
       }
 
-      if (i == currentOfferings.ItemListings.Count) return;
+      if (i == currentOfferings.ItemListings.Count)
+        NewPrice = -1;
+      else
+      {
+        var price = currentOfferings.ItemListings[i].PricePerUnit - 1;
+        NewPrice = (int)price;
+      }
 
-      var price = currentOfferings.ItemListings[i].PricePerUnit - 1;
-
-      NewPrice = price;
       newRequest = false;
     }
 

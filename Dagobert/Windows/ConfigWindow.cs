@@ -4,13 +4,11 @@ using ImGuiNET;
 
 namespace Dagobert.Windows;
 
-public class ConfigWindow : Window, IDisposable
+public class ConfigWindow : Window
 {
   public ConfigWindow()
     : base("Dagobert Configuration")
   { }
-
-  public void Dispose() { }
 
   public override void Draw()
   {
@@ -42,7 +40,7 @@ public class ConfigWindow : Window, IDisposable
       ImGui.BeginTooltip();
       ImGui.SetTooltip("Delay in milliseconds before opening the market board price list.\r\n" +
                        "Lower delay means faster auto pinching but may also cause market board price data to be unable to load.\r\n" +
-                       "Recommended to keep between 2000 and 3000");
+                       "Recommended to keep between 3000 and 4000. Reduce at your own risk!");
       ImGui.EndTooltip();
     }
 

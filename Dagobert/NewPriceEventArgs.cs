@@ -2,8 +2,8 @@
 
 namespace Dagobert
 {
-  internal class NewPriceEventArgs(uint newPrice) : EventArgs
+  internal class NewPriceEventArgs(int newPrice) : EventArgs
   {
-    public uint NewPrice { get; } = newPrice;
+    public int NewPrice { get; } = newPrice;
   }
 }

@@ -41,13 +41,13 @@ public sealed class Plugin : IDalamudPlugin
 
     ECommonsMain.Init(PluginInterface, this);
     _autoPinch = new AutoPinch();
+    WindowSystem.AddWindow(_autoPinch);
   }
 
   public void Dispose()
   {
-    _autoPinch.Dispose();
     WindowSystem.RemoveAllWindows();
-    ConfigWindow.Dispose();
+    _autoPinch.Dispose();
     CommandManager.RemoveHandler("/dagobert");
     ECommonsMain.Dispose();
   }
@@ -61,7 +61,6 @@ public sealed class Plugin : IDalamudPlugin
   private void DrawUI()
   {
     WindowSystem.Draw();
-    _autoPinch.Draw();
   }
 
   public void ToggleConfigUI() => ConfigWindow.Toggle();

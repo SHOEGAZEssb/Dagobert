@@ -1,5 +1,6 @@
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Windowing;
 using ECommons.Automation;
 using ECommons.Automation.LegacyTaskManager;
 using ECommons.DalamudServices;
@@ -10,24 +11,35 @@ using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Dagobert
 {
-  internal class AutoPinch : IDisposable
+  internal class AutoPinch : Window, IDisposable
   {
     private readonly MarketBoardHandler _mbHandler;
-    private uint? _newPrice;
+    private int? _newPrice;
     private bool _shouldPinch = false;
     private bool _currentlyPinching = false;
-    private readonly TaskManager _taskManager = new TaskManager();
+    private readonly TaskManager _taskManager = new();
 
     public AutoPinch()
+      : base("Dagobert", ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.AlwaysAutoResize, true)
     {
       _mbHandler = new MarketBoardHandler();
       _mbHandler.NewPriceReceived += MBHandler_NewPriceReceived;
+
+      // window
+      Position = new System.Numerics.Vector2(0, 0);
+      IsOpen = true;
+      ShowCloseButton = false;
+      RespectCloseHotkey = false;
+      DisableWindowSounds = true;
+      SizeConstraints = new WindowSizeConstraints()
+      {
+        MaximumSize = new System.Numerics.Vector2(0, 0),
+      };
     }
 
     public void Dispose()
@@ -36,7 +48,7 @@ namespace Dagobert
       _mbHandler.Dispose();
     }
 
-    public void Draw()
+    public override void Draw()
     {
       try
       {
@@ -134,111 +146,124 @@ namespace Dagobert
 
     private async Task PinchAll()
     {
-      _currentlyPinching = true;
-      _shouldPinch = true;
-
-      int num = 0;
-      var retainerSellList = await WaitForAddon("RetainerSellList");
-      unsafe
+      try
       {
-        var rsl = (AddonRetainerSell*)retainerSellList;
-        if (rsl == null)
-          throw new Exception("RetainerSellList is null");
-        var listNode = (AtkComponentNode*)rsl->AtkUnitBase.UldManager.NodeList[10];
-        var listComponent = (AtkComponentList*)listNode->Component;
-        num = listComponent->ListLength;
-      }
+        _currentlyPinching = true;
+        _shouldPinch = true;
 
-      for (int i = 0; i < num; i++)
-      {
-        if (!_shouldPinch)
-        {
-          _currentlyPinching = false;
-          return;
-        }
-
-        Svc.Log.Info($"Pinching item #{i}");
-        
+        int num = 0;
+        var retainerSellList = await WaitForAddon("RetainerSellList");
         unsafe
         {
-          var addon = (AddonRetainerSell*)retainerSellList;
-          var listNode = (AtkComponentNode*)addon->AtkUnitBase.UldManager.NodeList[10];
+          var rsl = (AddonRetainerSell*)retainerSellList;
+          if (rsl == null)
+            throw new Exception("RetainerSellList is null");
+          var listNode = (AtkComponentNode*)rsl->AtkUnitBase.UldManager.NodeList[10];
           var listComponent = (AtkComponentList*)listNode->Component;
-          listComponent->SelectItem(i, true);
-          Callback.Fire(&addon->AtkUnitBase, false, 0, i, 1); // open context menu
-                                                              // 0, 0, 1 -> open context menu, second 0 is item index
+          num = listComponent->ListLength;
         }
 
-        await Task.Delay(50);
-
-        var contextMenu = await WaitForAddon("ContextMenu");
-        unsafe
+        for (int i = 0; i < num; i++)
         {
-          var cm = (AddonContextMenu*)contextMenu;
-          if (cm == null)
-            throw new Exception($"Item #{i}: ContextMenu is null");
-          Callback.Fire(&cm->AtkUnitBase, true, 0, 0, 0); // open retainersell
-        }
-
-        await Task.Delay(TimeSpan.FromMilliseconds(Plugin.Configuration.GetMBPricesDelayMS)); // market board rate limiting delay
-
-        var retainerSell = await WaitForAddon("RetainerSell");
-        unsafe
-        {
-          var rs = (AddonRetainerSell*)retainerSell;
-          if (rs == null)
-            throw new Exception($"Item #{i}: RetainerSell is null");
-          Callback.Fire(&rs->AtkUnitBase, true, 4); // open mb prices
-        }
-
-        await Task.Run(() =>
-        {
-          while (!_newPrice.HasValue)
+          if (!_shouldPinch)
           {
-            Task.Delay(10);
-          } // wait until price received
-        });
-        var p = _newPrice!.Value;
-        _newPrice = null;
+            _currentlyPinching = false;
+            return;
+          }
 
-        await Task.Delay(50);
+          Svc.Log.Info($"Pinching item #{i}");
 
-        var itemSearchResult = await WaitForAddon("ItemSearchResult");
-        unsafe
-        {
-          var isr = (AddonItemSearchResult*)itemSearchResult;
-          if (isr == null)
-            throw new Exception($"Item #{i}: ItemSearchResult is null");
-          Callback.Fire(&isr->AtkUnitBase, true, -1); // close itemsearchresult
+          unsafe
+          {
+            var addon = (AddonRetainerSell*)retainerSellList;
+            var listNode = (AtkComponentNode*)addon->AtkUnitBase.UldManager.NodeList[10];
+            var listComponent = (AtkComponentList*)listNode->Component;
+            listComponent->SelectItem(i, true);
+            Callback.Fire(&addon->AtkUnitBase, false, 0, i, 1); // open context menu
+                                                                // 0, 0, 1 -> open context menu, second 0 is item index
+          }
+
+          await Task.Delay(50);
+
+          var contextMenu = await WaitForAddon("ContextMenu");
+          unsafe
+          {
+            var cm = (AddonContextMenu*)contextMenu;
+            if (cm == null)
+              throw new Exception($"Item #{i}: ContextMenu is null");
+            Callback.Fire(&cm->AtkUnitBase, true, 0, 0, 0); // open retainersell
+          }
+
+          await Task.Delay(TimeSpan.FromMilliseconds(Plugin.Configuration.GetMBPricesDelayMS)); // market board rate limiting delay
+
+          var retainerSell = await WaitForAddon("RetainerSell");
+          int originalPrice = 1;
+          unsafe
+          {
+            var rs = (AddonRetainerSell*)retainerSell;
+            if (rs == null)
+              throw new Exception($"Item #{i}: RetainerSell is null");
+
+            originalPrice = rs->AskingPrice->Value;
+            Callback.Fire(&rs->AtkUnitBase, true, 4); // open mb prices
+          }
+
+          await WaitForNewPrice();
+          if (!_newPrice.HasValue)
+            throw new Exception($"Item #{i}: could not get market board price");
+          var p = _newPrice.Value;
+          _newPrice = null;
+          if (p <= 0)
+            p = originalPrice;
+
+          await Task.Delay(50);
+
+          var itemSearchResult = await WaitForAddon("ItemSearchResult");
+          unsafe
+          {
+            var isr = (AddonItemSearchResult*)itemSearchResult;
+            if (isr == null)
+              throw new Exception($"Item #{i}: ItemSearchResult is null");
+            Callback.Fire(&isr->AtkUnitBase, true, -1); // close itemsearchresult
+          }
+
+          await Task.Delay(50);
+
+          unsafe
+          {
+            var rs = (AddonRetainerSell*)retainerSell;
+            Callback.Fire(&rs->AtkUnitBase, true, 2, (int)p); // input new price       
+          }
+
+          await Task.Delay(100);
+
+          unsafe
+          {
+            var rs = (AddonRetainerSell*)retainerSell;
+            Callback.Fire(&rs->AtkUnitBase, true, 0); // close retainersell
+          }
+
+          await Task.Delay(100);
         }
 
-        await Task.Delay(50);
-
-        unsafe
-        {
-          var rs = (AddonRetainerSell*)retainerSell;
-          Callback.Fire(&rs->AtkUnitBase, true, 2, (int)p); // input new price       
-        }
-
-        await Task.Delay(100);
-
-        unsafe
-        {
-          var rs = (AddonRetainerSell*)retainerSell;
-          Callback.Fire(&rs->AtkUnitBase, true, 0); // close retainersell
-        }
-
-        await Task.Delay(100);
+        Svc.Chat.Print("Auto pinching was successfull");
       }
-
-      _shouldPinch = false;
-      _currentlyPinching = false;
-      Svc.Chat.Print("Auto pinching was successfull");
+      catch (Exception ex)
+      {
+        Svc.Log.Error(ex, "Auto pinching failed");
+        Svc.Chat.PrintError($"Auto pinching failed: {ex.Message}");
+      }
+      finally
+      {
+        _shouldPinch = false;
+        _currentlyPinching = false;
+      }
     }
 
     private void MBHandler_NewPriceReceived(object? sender, NewPriceEventArgs e)
     {
-      _newPrice = e.NewPrice;
+      if (_shouldPinch || _currentlyPinching)
+        _newPrice = e.NewPrice;
     }
 
     public static unsafe Vector2 GetNodePosition(AtkResNode* node)
@@ -266,6 +291,34 @@ namespace Dagobert
       }
 
       return scale;
+    }
+
+    private async Task<int?> WaitForNewPrice()
+    {
+      return await WaitForNewPrice(TimeSpan.FromSeconds(3));
+    }
+
+    private async Task<int?> WaitForNewPrice(TimeSpan timeout)
+    {
+      using CancellationTokenSource cts = new();
+      var tryGetNewPriceTask = TryGetNewPrice(cts.Token);
+      var completedTask = await Task.WhenAny(tryGetNewPriceTask, Task.Delay(timeout));
+
+      if (completedTask == tryGetNewPriceTask)
+        return tryGetNewPriceTask.Result;
+      else
+      {
+        cts.Cancel();
+        return null;
+      }
+    }
+
+    private async Task<int?> TryGetNewPrice(CancellationToken token)
+    {
+      while (!_newPrice.HasValue && !token.IsCancellationRequested)
+        await Task.Delay(100, CancellationToken.None);
+
+      return _newPrice;
     }
 
     private static async Task<nint> WaitForAddon(string addonName)
