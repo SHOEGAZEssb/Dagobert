@@ -12,6 +12,8 @@ using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,9 +23,7 @@ namespace Dagobert
   {
     private readonly MarketBoardHandler _mbHandler;
     private int? _newPrice;
-    private bool _shouldPinch = false;
-    private bool _currentlyPinching = false;
-    private readonly TaskManager _taskManager = new();
+    private readonly TaskManager _taskManager;
 
     public AutoPinch()
       : base("Dagobert", ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.AlwaysAutoResize, true)
@@ -41,6 +41,12 @@ namespace Dagobert
       {
         MaximumSize = new System.Numerics.Vector2(0, 0),
       };
+
+      _taskManager = new TaskManager
+      {
+        TimeLimitMS = 10000,
+        AbortOnTimeout = true
+      };
     }
 
     public void Dispose()
@@ -56,47 +62,45 @@ namespace Dagobert
         float oldSize = 0;
         unsafe
         {
-          var addon = (AddonRetainerSell*)Svc.GameGui.GetAddonByName("RetainerSellList");
-          if (addon == null || !addon->AtkUnitBase.IsVisible || !addon->IsReady)
-            return;
+          if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
+          {
 
-          var node = addon->AtkUnitBase.UldManager.NodeList[17];
+            var node = addon->UldManager.NodeList[17];
 
-          if (node == null)
-            return;
+            if (node == null)
+              return;
 
-          var position = GetNodePosition(node);
-          var scale = GetNodeScale(node);
-          var size = new Vector2(node->Width, node->Height) * scale;
+            var position = GetNodePosition(node);
+            var scale = GetNodeScale(node);
+            var size = new Vector2(node->Width, node->Height) * scale;
 
-          ImGuiHelpers.ForceNextWindowMainViewport();
-          ImGuiHelpers.SetNextWindowPosRelativeMainViewport(position);
+            ImGuiHelpers.ForceNextWindowMainViewport();
+            ImGuiHelpers.SetNextWindowPosRelativeMainViewport(position);
 
-          ImGui.PushStyleColor(ImGuiCol.WindowBg, 0);
-          oldSize = ImGui.GetFont().Scale;
-          ImGui.GetFont().Scale *= scale.X;
-          ImGui.PushFont(ImGui.GetFont());
-          ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0f.Scale());
-          ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(3f.Scale(), 3f.Scale()));
-          ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0f.Scale(), 0f.Scale()));
-          ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f.Scale());
-          ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, size);
-          ImGui.Begin($"###AutoPinch{node->NodeId}", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNavFocus
-              | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
+            ImGui.PushStyleColor(ImGuiCol.WindowBg, 0);
+            oldSize = ImGui.GetFont().Scale;
+            ImGui.GetFont().Scale *= scale.X;
+            ImGui.PushFont(ImGui.GetFont());
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0f.Scale());
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(3f.Scale(), 3f.Scale()));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0f.Scale(), 0f.Scale()));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f.Scale());
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, size);
+            ImGui.Begin($"###AutoPinch{node->NodeId}", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNavFocus
+                | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
+
+            DrawAutoPinchButton();
+
+            ImGui.End();
+            ImGui.PopStyleVar(5);
+            ImGui.GetFont().Scale = oldSize;
+            ImGui.PopFont();
+            ImGui.PopStyleColor();
+          }
         }
-
-        DrawAutoPinchButton();
-
-        ImGui.End();
-        ImGui.PopStyleVar(5);
-        ImGui.GetFont().Scale = oldSize;
-        ImGui.PopFont();
-        ImGui.PopStyleColor();
       }
       catch (Exception ex)
       {
-        _shouldPinch = false;
-        _currentlyPinching = false;
         _taskManager.Abort();
         Svc.Log.Error(ex, "Error while auto pinching");
         Svc.Chat.PrintError($"Error while auto pinching: {ex.Message}");
@@ -105,167 +109,138 @@ namespace Dagobert
 
     private void DrawAutoPinchButton()
     {
-      if (_shouldPinch)
+      if (_taskManager.IsBusy)
       {
         if (ImGui.Button("Cancel"))
-          _shouldPinch = false;
+          _taskManager.Abort();
         if (ImGui.IsItemHovered())
         {
           ImGui.BeginTooltip();
-          ImGui.SetTooltip("Cancels the auto pinching process after the current item");
+          ImGui.SetTooltip("Cancels the auto pinching process");
           ImGui.EndTooltip();
         }
       }
       else
       {
-        bool disabled = _currentlyPinching || _shouldPinch;
-        if (disabled)
-          ImGui.BeginDisabled();
-
         if (ImGui.Button("Auto Pinch"))
-          _taskManager.Enqueue(() => _ = PinchAll());
+          PinchAll();
         if (ImGui.IsItemHovered())
         {
-          string tooltipText;
-          if (disabled)
-            tooltipText = "Canceling auto pinch after current item...";
-          else
-          {
-            tooltipText = "Starts auto pinching\r\n" +
-                          "Please do not interact with the game while this process is running";
-          }
-
           ImGui.BeginTooltip();
-          ImGui.SetTooltip(tooltipText);
+          ImGui.SetTooltip("Starts auto pinching\r\n" +
+                           "Please do not interact with the game while this process is running");
           ImGui.EndTooltip();
         }
 
-        if (disabled)
-          ImGui.EndDisabled();
       }
     }
 
-    private async Task PinchAll()
+    private unsafe void PinchAll()
+    {
+      _newPrice = null;
+      if (_taskManager.IsBusy)
+        return;
+
+      if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
+      {
+        var listNode = (AtkComponentNode*)addon->UldManager.NodeList[10];
+        var listComponent = (AtkComponentList*)listNode->Component;
+        int num = listComponent->ListLength;
+        for (int i = 0; i < num; i++)
+        {
+          EnqueueSingleItem(i);
+        }
+      }
+    }
+
+    private void EnqueueSingleItem(int index)
+    {
+      _taskManager.Enqueue(() => OpenItemContextMenu(index), "OpenItemContextMenu");
+      _taskManager.DelayNext(100);
+      _taskManager.Enqueue(ClickAdjustPrice, "ClickAdjustPrice");
+      _taskManager.DelayNext(Plugin.Configuration.GetMBPricesDelayMS);
+      _taskManager.Enqueue(ClickComparePrice, "ClickComparePrice");
+      _taskManager.DelayNext(1000);
+      _taskManager.Enqueue(SetNewPrice, "SetNewPrice");
+    }
+
+    private static unsafe bool? OpenItemContextMenu(int itemIndex)
+    {
+      if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
+      {
+        Svc.Log.Debug($"Clicking item {itemIndex}");
+        Callback.Fire(addon, true, 0, itemIndex, 1); // click item
+        return true;
+      }
+
+      return false;
+    }
+
+    private static unsafe bool? ClickAdjustPrice()
+    {
+      if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("ContextMenu", out var addon) && GenericHelpers.IsAddonReady(addon))
+      {
+        Svc.Log.Debug($"Clicking adjust price");
+        Callback.Fire(addon, true, 0, 0, 0, 0, 0); // click adjust price
+        return true;
+      }
+
+      return false;
+    }
+
+    private static unsafe bool? ClickComparePrice()
+    {
+      if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var addon) && GenericHelpers.IsAddonReady(&addon->AtkUnitBase))
+      {
+        Svc.Log.Debug($"Clicking compare prices");
+        Callback.Fire(&addon->AtkUnitBase, true, 4);
+        return true;
+      }
+
+      return false;
+    }
+
+    private unsafe bool? SetNewPrice()
     {
       try
       {
-        _currentlyPinching = true;
-        _shouldPinch = true;
+        // close compare price window
+        if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("ItemSearchResult", out var addon))
+          addon->Close(true);
+        else
+          return false;
 
-        int num = 0;
-        var retainerSellList = await WaitForAddon("RetainerSellList");
-        unsafe
+        if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var retainerSell) && GenericHelpers.IsAddonReady(&retainerSell->AtkUnitBase))
         {
-          var rsl = (AddonRetainerSell*)retainerSellList;
-          if (rsl == null)
-            throw new Exception("RetainerSellList is null");
-          var listNode = (AtkComponentNode*)rsl->AtkUnitBase.UldManager.NodeList[10];
-          var listComponent = (AtkComponentList*)listNode->Component;
-          num = listComponent->ListLength;
+          Svc.Log.Debug($"Setting new price");
+          var ui = &retainerSell->AtkUnitBase;
+          if (!_newPrice.HasValue || _newPrice <= 0)
+          {
+            Callback.Fire(&retainerSell->AtkUnitBase, true, 1); // cancel
+            ui->Close(true);
+            return false;
+          }
+          else
+          {
+            retainerSell->AskingPrice->SetValue(_newPrice!.Value);
+            Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
+            ui->Close(true);
+            return true;
+          }
         }
-
-        for (int i = 0; i < num; i++)
-        {
-          if (!_shouldPinch)
-          {
-            _currentlyPinching = false;
-            return;
-          }
-
-          Svc.Log.Info($"Pinching item #{i}");
-
-          unsafe
-          {
-            var addon = (AddonRetainerSell*)retainerSellList;
-            Callback.Fire(&addon->AtkUnitBase, true, 0, i, 1); // open context menu
-                                                                // 0, 0, 1 -> open context menu, second 0 is item index
-          }
-
-          await Task.Delay(50);
-
-          var contextMenu = await WaitForAddon("ContextMenu");
-          unsafe
-          {
-            var cm = (AddonContextMenu*)contextMenu;
-            if (cm == null)
-              throw new Exception($"Item #{i}: ContextMenu is null");
-            Callback.Fire(&cm->AtkUnitBase, true, 0, 0, 0, 0, 0); // open retainersell
-          }
-
-          await Task.Delay(TimeSpan.FromMilliseconds(Plugin.Configuration.GetMBPricesDelayMS)); // market board rate limiting delay
-
-          var retainerSell = await WaitForAddon("RetainerSell");
-          int originalPrice = 1;
-          unsafe
-          {
-            var rs = (AddonRetainerSell*)retainerSell;
-            if (rs == null)
-              throw new Exception($"Item #{i}: RetainerSell is null");
-
-            originalPrice = rs->AskingPrice->Value;
-            Callback.Fire(&rs->AtkUnitBase, true, 4); // open mb prices
-          }
-
-          await WaitForNewPrice();
-          if (!_newPrice.HasValue)
-            throw new Exception($"Item #{i}: could not get market board price");
-          var p = _newPrice.Value;
-          _newPrice = null;
-          if (p <= 0)
-          {
-            p = originalPrice;
-            Svc.Chat.Print($"Item #{i} does not have a known price. Using original price of {p} gil");
-          }
-
-          await Task.Delay(50);
-
-          var itemSearchResult = await WaitForAddon("ItemSearchResult");
-          unsafe
-          {
-            var isr = (AddonItemSearchResult*)itemSearchResult;
-            if (isr == null)
-              throw new Exception($"Item #{i}: ItemSearchResult is null");
-            isr->Close(true);
-          }
-
-          await Task.Delay(50);
-
-          unsafe
-          {
-            var rs = (AddonRetainerSell*)retainerSell;
-            rs->AskingPrice->SetValue(p);     
-          }
-
-          await Task.Delay(100);
-
-          unsafe
-          {
-            var rs = (AddonRetainerSell*)retainerSell;
-            Callback.Fire(&rs->AtkUnitBase, true, 0); // close retainersell
-            rs->Close(true);
-          }
-
-          await Task.Delay(100);
-        }
-
-        Svc.Chat.Print("Auto pinching was successfull");
-      }
-      catch (Exception ex)
-      {
-        Svc.Log.Error(ex, "Auto pinching failed");
-        Svc.Chat.PrintError($"Auto pinching failed: {ex.Message}");
+        else
+          return false;
       }
       finally
       {
-        _shouldPinch = false;
-        _currentlyPinching = false;
+        _newPrice = null;
       }
     }
 
     private void MBHandler_NewPriceReceived(object? sender, NewPriceEventArgs e)
     {
-      if (_shouldPinch || _currentlyPinching)
-        _newPrice = e.NewPrice;
+      Svc.Log.Debug($"New price received: {e.NewPrice}");
+      _newPrice = e.NewPrice;
     }
 
     public static unsafe Vector2 GetNodePosition(AtkResNode* node)
@@ -293,72 +268,6 @@ namespace Dagobert
       }
 
       return scale;
-    }
-
-    private async Task<int?> WaitForNewPrice()
-    {
-      return await WaitForNewPrice(TimeSpan.FromSeconds(3));
-    }
-
-    private async Task<int?> WaitForNewPrice(TimeSpan timeout)
-    {
-      using CancellationTokenSource cts = new();
-      var tryGetNewPriceTask = TryGetNewPrice(cts.Token);
-      var completedTask = await Task.WhenAny(tryGetNewPriceTask, Task.Delay(timeout));
-
-      if (completedTask == tryGetNewPriceTask)
-        return tryGetNewPriceTask.Result;
-      else
-      {
-        cts.Cancel();
-        return null;
-      }
-    }
-
-    private async Task<int?> TryGetNewPrice(CancellationToken token)
-    {
-      while (!_newPrice.HasValue && !token.IsCancellationRequested)
-        await Task.Delay(100, CancellationToken.None);
-
-      return _newPrice;
-    }
-
-    private static async Task<nint> WaitForAddon(string addonName)
-    {
-      return await WaitForAddon(addonName, TimeSpan.FromMilliseconds(Plugin.Configuration.GetAddonMaxTimeoutMS));
-    }
-
-    private static async Task<nint> WaitForAddon(string addonName, TimeSpan timeout)
-    {
-      using CancellationTokenSource cts = new();
-      var tryGetAddonTask = TryGetAddon(addonName, cts.Token);
-      var completedTask = await Task.WhenAny(tryGetAddonTask, Task.Delay(timeout));
-
-      if (completedTask == tryGetAddonTask)
-        return tryGetAddonTask.Result;
-      else
-      {
-        cts.Cancel();
-        return nint.Zero;
-      }
-    }
-
-    private static async Task<nint> TryGetAddon(string addonName, CancellationToken token)
-    {
-      nint addon = 0;
-      while (addon == nint.Zero && !token.IsCancellationRequested)
-      {
-        unsafe
-        {
-          var addonTemp = (AtkUnitBase*)Svc.GameGui.GetAddonByName(addonName);
-          if (addonTemp != null && GenericHelpers.IsAddonReady(addonTemp))
-            addon = (nint)addonTemp;
-
-        }
-        await Task.Delay(50, CancellationToken.None);
-      }
-
-      return addon;
     }
   }
 }
