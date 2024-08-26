@@ -1,6 +1,7 @@
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
+using ECommons;
 using ECommons.Automation;
 using ECommons.Automation.LegacyTaskManager;
 using ECommons.DalamudServices;
@@ -176,10 +177,7 @@ namespace Dagobert
           unsafe
           {
             var addon = (AddonRetainerSell*)retainerSellList;
-            var listNode = (AtkComponentNode*)addon->AtkUnitBase.UldManager.NodeList[10];
-            var listComponent = (AtkComponentList*)listNode->Component;
-            listComponent->SelectItem(i, true);
-            Callback.Fire(&addon->AtkUnitBase, false, 0, i, 1); // open context menu
+            Callback.Fire(&addon->AtkUnitBase, true, 0, i, 1); // open context menu
                                                                 // 0, 0, 1 -> open context menu, second 0 is item index
           }
 
@@ -191,7 +189,7 @@ namespace Dagobert
             var cm = (AddonContextMenu*)contextMenu;
             if (cm == null)
               throw new Exception($"Item #{i}: ContextMenu is null");
-            Callback.Fire(&cm->AtkUnitBase, true, 0, 0, 0); // open retainersell
+            Callback.Fire(&cm->AtkUnitBase, true, 0, 0, 0, 0, 0); // open retainersell
           }
 
           await Task.Delay(TimeSpan.FromMilliseconds(Plugin.Configuration.GetMBPricesDelayMS)); // market board rate limiting delay
@@ -214,7 +212,10 @@ namespace Dagobert
           var p = _newPrice.Value;
           _newPrice = null;
           if (p <= 0)
+          {
             p = originalPrice;
+            Svc.Chat.Print($"Item #{i} does not have a known price. Using original price of {p} gil");
+          }
 
           await Task.Delay(50);
 
@@ -224,7 +225,7 @@ namespace Dagobert
             var isr = (AddonItemSearchResult*)itemSearchResult;
             if (isr == null)
               throw new Exception($"Item #{i}: ItemSearchResult is null");
-            Callback.Fire(&isr->AtkUnitBase, true, -1); // close itemsearchresult
+            isr->Close(true);
           }
 
           await Task.Delay(50);
@@ -232,7 +233,7 @@ namespace Dagobert
           unsafe
           {
             var rs = (AddonRetainerSell*)retainerSell;
-            Callback.Fire(&rs->AtkUnitBase, true, 2, (int)p); // input new price       
+            rs->AskingPrice->SetValue(p);     
           }
 
           await Task.Delay(100);
@@ -241,6 +242,7 @@ namespace Dagobert
           {
             var rs = (AddonRetainerSell*)retainerSell;
             Callback.Fire(&rs->AtkUnitBase, true, 0); // close retainersell
+            rs->Close(true);
           }
 
           await Task.Delay(100);
@@ -349,7 +351,7 @@ namespace Dagobert
         unsafe
         {
           var addonTemp = (AtkUnitBase*)Svc.GameGui.GetAddonByName(addonName);
-          if (addonTemp != null && addonTemp->IsReady && addonTemp->IsVisible)
+          if (addonTemp != null && GenericHelpers.IsAddonReady(addonTemp))
             addon = (nint)addonTemp;
 
         }
