@@ -6,12 +6,14 @@ using ECommons.Automation;
 using ECommons.Automation.LegacyTaskManager;
 using ECommons.DalamudServices;
 using ECommons.ImGuiMethods;
+using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading;
@@ -24,6 +26,7 @@ namespace Dagobert
     private readonly MarketBoardHandler _mbHandler;
     private int? _newPrice;
     private readonly TaskManager _taskManager;
+    private Dictionary<string, int?> _cachedPrices = [];
 
     public AutoPinch()
       : base("Dagobert", ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.AlwaysAutoResize, true)
@@ -138,6 +141,7 @@ namespace Dagobert
     private unsafe void PinchAll()
     {
       _newPrice = null;
+      _cachedPrices = [];
       if (_taskManager.IsBusy)
         return;
 
@@ -155,13 +159,14 @@ namespace Dagobert
 
     private void EnqueueSingleItem(int index)
     {
-      _taskManager.Enqueue(() => OpenItemContextMenu(index), "OpenItemContextMenu");
+      _taskManager.Enqueue(() => OpenItemContextMenu(index), $"OpenItemContextMenu{index}");
       _taskManager.DelayNext(100);
-      _taskManager.Enqueue(ClickAdjustPrice, "ClickAdjustPrice");
-      _taskManager.DelayNext(Plugin.Configuration.GetMBPricesDelayMS);
-      _taskManager.Enqueue(ClickComparePrice, "ClickComparePrice");
+      _taskManager.Enqueue(ClickAdjustPrice, $"ClickAdjustPrice{index}");
+      _taskManager.DelayNext(100);
+      _taskManager.Enqueue(() => DelayMarketBoard(index), $"DelayMB{index}");
+      _taskManager.Enqueue(ClickComparePrice, $"ClickComparePrice{index}");
       _taskManager.DelayNext(1000);
-      _taskManager.Enqueue(SetNewPrice, "SetNewPrice");
+      _taskManager.Enqueue(SetNewPrice, $"SetNewPrice{index}");
     }
 
     private static unsafe bool? OpenItemContextMenu(int itemIndex)
@@ -188,13 +193,37 @@ namespace Dagobert
       return false;
     }
 
-    private static unsafe bool? ClickComparePrice()
+    private unsafe bool? DelayMarketBoard(int itemIndex)
     {
       if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var addon) && GenericHelpers.IsAddonReady(&addon->AtkUnitBase))
       {
-        Svc.Log.Debug($"Clicking compare prices");
-        Callback.Fire(&addon->AtkUnitBase, true, 4);
+        var itemName = addon->ItemName->NodeText.ToString();
+        if (!_cachedPrices.TryGetValue(itemName, out int? value) || value <= 0)
+          _taskManager.DelayNextImmediate(Plugin.Configuration.GetMBPricesDelayMS);
+
         return true;
+      }
+
+      return false;
+    }
+
+    private unsafe bool? ClickComparePrice()
+    {
+      if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var addon) && GenericHelpers.IsAddonReady(&addon->AtkUnitBase))
+      {
+        // if we have a cached price, dont click compare
+        var itemName = addon->ItemName->NodeText.ToString();
+        if (_cachedPrices.TryGetValue(itemName, out int? value) && value > 0)
+        {
+          _newPrice = value;
+          return true;
+        }
+        else
+        {
+          Svc.Log.Debug($"Clicking compare prices");
+          Callback.Fire(&addon->AtkUnitBase, true, 4);
+          return true;
+        }
       }
 
       return false;
@@ -207,25 +236,26 @@ namespace Dagobert
         // close compare price window
         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("ItemSearchResult", out var addon))
           addon->Close(true);
-        else
-          return false;
 
         if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var retainerSell) && GenericHelpers.IsAddonReady(&retainerSell->AtkUnitBase))
         {
           Svc.Log.Debug($"Setting new price");
           var ui = &retainerSell->AtkUnitBase;
-          if (!_newPrice.HasValue || _newPrice <= 0)
+          if (_newPrice.HasValue && _newPrice > 0)
+          {
+            var itemName = retainerSell->ItemName->NodeText.ToString();
+            _cachedPrices.TryAdd(itemName, _newPrice);
+
+            retainerSell->AskingPrice->SetValue(_newPrice.Value);
+            Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
+            ui->Close(true);
+            return true;
+          }
+          else
           {
             Callback.Fire(&retainerSell->AtkUnitBase, true, 1); // cancel
             ui->Close(true);
             return false;
-          }
-          else
-          {
-            retainerSell->AskingPrice->SetValue(_newPrice!.Value);
-            Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
-            ui->Close(true);
-            return true;
           }
         }
         else
