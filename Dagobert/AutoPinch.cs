@@ -163,7 +163,7 @@ namespace Dagobert
       _taskManager.DelayNext(100);
       _taskManager.Enqueue(ClickAdjustPrice, $"ClickAdjustPrice{index}");
       _taskManager.DelayNext(100);
-      _taskManager.Enqueue(() => DelayMarketBoard(index), $"DelayMB{index}");
+      _taskManager.Enqueue(DelayMarketBoard, $"DelayMB{index}");
       _taskManager.Enqueue(ClickComparePrice, $"ClickComparePrice{index}");
       _taskManager.DelayNext(1000);
       _taskManager.Enqueue(SetNewPrice, $"SetNewPrice{index}");
@@ -193,13 +193,16 @@ namespace Dagobert
       return false;
     }
 
-    private unsafe bool? DelayMarketBoard(int itemIndex)
+    private unsafe bool? DelayMarketBoard()
     {
       if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var addon) && GenericHelpers.IsAddonReady(&addon->AtkUnitBase))
       {
         var itemName = addon->ItemName->NodeText.ToString();
         if (!_cachedPrices.TryGetValue(itemName, out int? value) || value <= 0)
+        {
+          Svc.Log.Debug($"{itemName} has no cached price (or that price was <= 0), delaying next mb open");
           _taskManager.DelayNextImmediate(Plugin.Configuration.GetMBPricesDelayMS);
+        }
 
         return true;
       }
@@ -215,6 +218,7 @@ namespace Dagobert
         var itemName = addon->ItemName->NodeText.ToString();
         if (_cachedPrices.TryGetValue(itemName, out int? value) && value > 0)
         {
+          Svc.Log.Debug($"{itemName}: using cached price");
           _newPrice = value;
           return true;
         }
@@ -239,11 +243,11 @@ namespace Dagobert
 
         if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var retainerSell) && GenericHelpers.IsAddonReady(&retainerSell->AtkUnitBase))
         {
-          Svc.Log.Debug($"Setting new price");
           var ui = &retainerSell->AtkUnitBase;
+          var itemName = retainerSell->ItemName->NodeText.ToString();
           if (_newPrice.HasValue && _newPrice > 0)
           {
-            var itemName = retainerSell->ItemName->NodeText.ToString();
+            Svc.Log.Debug($"Setting new price");            
             _cachedPrices.TryAdd(itemName, _newPrice);
 
             retainerSell->AskingPrice->SetValue(_newPrice.Value);
@@ -253,9 +257,11 @@ namespace Dagobert
           }
           else
           {
+            Svc.Log.Warning("SetNewPrice: No price to set");
+            Svc.Chat.PrintError($"{itemName}: No price to set, please set price manually");
             Callback.Fire(&retainerSell->AtkUnitBase, true, 1); // cancel
             ui->Close(true);
-            return false;
+            return true;
           }
         }
         else
