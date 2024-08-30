@@ -1,5 +1,4 @@
-﻿using System;
-using Dalamud.Interface.Windowing;
+﻿using Dalamud.Interface.Windowing;
 using ImGuiNET;
 
 namespace Dagobert.Windows;

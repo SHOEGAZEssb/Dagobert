@@ -1,4 +1,3 @@
-using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using ECommons;
@@ -6,18 +5,15 @@ using ECommons.Automation;
 using ECommons.Automation.LegacyTaskManager;
 using ECommons.DalamudServices;
 using ECommons.ImGuiMethods;
-using ECommons.Throttlers;
-using FFXIVClientStructs.FFXIV.Client.Game;
+using ECommons.UIHelpers.AtkReaderImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Linq;
+using static ECommons.UIHelpers.AtkReaderImplementations.ReaderContextMenu;
 
 namespace Dagobert
 {
@@ -25,6 +21,7 @@ namespace Dagobert
   {
     private readonly MarketBoardHandler _mbHandler;
     private int? _newPrice;
+    private bool _skipCurrentItem = false;
     private readonly TaskManager _taskManager;
     private Dictionary<string, int?> _cachedPrices = [];
 
@@ -134,16 +131,17 @@ namespace Dagobert
                            "Please do not interact with the game while this process is running");
           ImGui.EndTooltip();
         }
-
       }
     }
 
     private unsafe void PinchAll()
     {
-      _newPrice = null;
-      _cachedPrices = [];
       if (_taskManager.IsBusy)
         return;
+
+      _newPrice = null;
+      _cachedPrices = [];
+      _skipCurrentItem = false;
 
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
@@ -181,20 +179,48 @@ namespace Dagobert
       return false;
     }
 
-    private static unsafe bool? ClickAdjustPrice()
+    private unsafe bool? ClickAdjustPrice()
     {
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("ContextMenu", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
-        Svc.Log.Debug($"Clicking adjust price");
-        Callback.Fire(addon, true, 0, 0, 0, 0, 0); // click adjust price
+        var reader = new ReaderContextMenu(addon);
+        if (!IsItemMannequin(reader.Entries))
+        {
+          Svc.Log.Debug($"Clicking adjust price");
+          Callback.Fire(addon, true, 0, 0, 0, 0, 0); // click adjust price
+        }
+        else
+        {
+          Svc.Log.Debug("Current item is a mannequin item and will be skipped");
+          _skipCurrentItem = true;
+          addon->Close(true);
+        }
+
         return true;
       }
 
       return false;
     }
 
+    /// <summary>
+    /// Checks if an item is a mannequin item, by checking if there is
+    /// the "adjust price" entry in the given <paramref name="contextMenuEntries"/>.
+    /// </summary>
+    /// <param name="contextMenuEntries">Context menu entries to check.</param>
+    /// <returns>True if item is a mannequin item, false otherwise.</returns>
+    private static bool IsItemMannequin(List<ContextMenuEntry> contextMenuEntries)
+    {
+      return !contextMenuEntries.Any((e) => e.Name.Equals("adjust price", StringComparison.CurrentCultureIgnoreCase)
+                                        || e.Name.Equals("angebot ändern", StringComparison.CurrentCultureIgnoreCase)
+                                        || e.Name.Equals("edit price", StringComparison.CurrentCultureIgnoreCase)
+                                        || e.Name.Equals("ajuster le prix", StringComparison.CurrentCultureIgnoreCase));
+    }
+
     private unsafe bool? DelayMarketBoard()
     {
+      if (_skipCurrentItem)
+        return true;
+
       if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var addon) && GenericHelpers.IsAddonReady(&addon->AtkUnitBase))
       {
         var itemName = addon->ItemName->NodeText.ToString();
@@ -212,6 +238,9 @@ namespace Dagobert
 
     private unsafe bool? ClickComparePrice()
     {
+      if (_skipCurrentItem)
+        return true;
+
       if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var addon) && GenericHelpers.IsAddonReady(&addon->AtkUnitBase))
       {
         // if we have a cached price, dont click compare
@@ -237,6 +266,9 @@ namespace Dagobert
     {
       try
       {
+        if (_skipCurrentItem)
+          return true;
+
         // close compare price window
         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("ItemSearchResult", out var addon))
           addon->Close(true);
@@ -270,6 +302,7 @@ namespace Dagobert
       finally
       {
         _newPrice = null;
+        _skipCurrentItem = false;
       }
     }
 
