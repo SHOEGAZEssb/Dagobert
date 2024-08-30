@@ -1,4 +1,4 @@
-using Dalamud.Interface.Utility;
+﻿using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using ECommons;
 using ECommons.Automation;
@@ -211,9 +211,9 @@ namespace Dagobert
     private static bool IsItemMannequin(List<ContextMenuEntry> contextMenuEntries)
     {
       return !contextMenuEntries.Any((e) => e.Name.Equals("adjust price", StringComparison.CurrentCultureIgnoreCase)
-                                        || e.Name.Equals("angebot �ndern", StringComparison.CurrentCultureIgnoreCase)
-                                        || e.Name.Equals("edit price", StringComparison.CurrentCultureIgnoreCase)
-                                        || e.Name.Equals("ajuster le prix", StringComparison.CurrentCultureIgnoreCase));
+                                        || e.Name.Equals("preis ändern", StringComparison.CurrentCultureIgnoreCase)
+                                        || e.Name.Equals("価格を変更する", StringComparison.CurrentCultureIgnoreCase)
+                                        || e.Name.Equals("changer le prix", StringComparison.CurrentCultureIgnoreCase));
     }
 
     private unsafe bool? DelayMarketBoard()
