@@ -4,7 +4,7 @@ using ECommons.DalamudServices;
 using ECommons.EzHookManager;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using System;
 using System.Linq;
 using System.Runtime.InteropServices;
