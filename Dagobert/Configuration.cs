@@ -14,6 +14,8 @@ public class Configuration : IPluginConfiguration
 
   public int GetMBPricesDelayMS { get; set; } = 3000;
 
+  public bool ShowErrorsInChat { get; set; } = true;
+
   // the below exist just to make saving less cumbersome
   public void Save()
   {

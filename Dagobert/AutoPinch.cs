@@ -103,7 +103,8 @@ namespace Dagobert
       {
         _taskManager.Abort();
         Svc.Log.Error(ex, "Error while auto pinching");
-        Svc.Chat.PrintError($"Error while auto pinching: {ex.Message}");
+        if (Plugin.Configuration.ShowErrorsInChat)
+          Svc.Chat.PrintError($"Error while auto pinching: {ex.Message}");
       }
     }
 
@@ -290,7 +291,8 @@ namespace Dagobert
           else
           {
             Svc.Log.Warning("SetNewPrice: No price to set");
-            Svc.Chat.PrintError($"{itemName}: No price to set, please set price manually");
+            if (Plugin.Configuration.ShowErrorsInChat)
+              Svc.Chat.PrintError($"{itemName}: No price to set, please set price manually");
             Callback.Fire(&retainerSell->AtkUnitBase, true, 1); // cancel
             ui->Close(true);
             return true;

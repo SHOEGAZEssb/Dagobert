@@ -25,7 +25,6 @@ public class ConfigWindow : Window
     }
 
     int currentMBDelay = Plugin.Configuration.GetMBPricesDelayMS;
-
     ImGui.BeginGroup();
     ImGui.Text("Market Board Price Check Delay (ms)");
     if (ImGui.SliderInt("###sliderMBDelay", ref currentMBDelay, 1, 10000))
@@ -43,5 +42,11 @@ public class ConfigWindow : Window
       ImGui.EndTooltip();
     }
 
+    bool chatErrors = Plugin.Configuration.ShowErrorsInChat;
+    if (ImGui.Checkbox("Show errors in chat", ref chatErrors))
+    {
+      Plugin.Configuration.ShowErrorsInChat = chatErrors;
+      Plugin.Configuration.Save();
+    }
   }
 }
