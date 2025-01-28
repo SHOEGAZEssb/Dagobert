@@ -1,4 +1,5 @@
 ﻿using Dalamud.Configuration;
+using Dalamud.Game.ClientState.Keys;
 using System;
 
 namespace Dagobert;
@@ -15,6 +16,10 @@ public class Configuration : IPluginConfiguration
   public int GetMBPricesDelayMS { get; set; } = 3000;
 
   public bool ShowErrorsInChat { get; set; } = true;
+
+  public bool EnablePinchKey { get; set; } = false;
+
+  public VirtualKey PinchKey { get; set; } = VirtualKey.Q;
 
   // the below exist just to make saving less cumbersome
   public void Save()

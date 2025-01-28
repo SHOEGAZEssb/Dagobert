@@ -64,6 +64,8 @@ namespace Dagobert
         {
           if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
           {
+            if (Plugin.Configuration.EnablePinchKey && Plugin.KeyState[Plugin.Configuration.PinchKey])
+              PinchAll();
 
             var node = addon->UldManager.NodeList[17];
 

@@ -45,7 +45,7 @@ namespace Dagobert
     }
     private int _newPrice;
 
-    public event EventHandler<NewPriceEventArgs> NewPriceReceived;
+    public event EventHandler<NewPriceEventArgs>? NewPriceReceived;
 
     public MarketBoardHandler()
     {
