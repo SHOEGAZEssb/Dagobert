@@ -19,10 +19,6 @@ namespace Dagobert
       MarketBoardOfferings
     }
 
-    private delegate IntPtr GetFilePointer(byte index);
-    [Signature("E8 ?? ?? ?? ?? 48 85 C0 74 14 83 7B 44 00")]
-    private readonly GetFilePointer getFilePtr;
-
     private delegate IntPtr AddonOnSetup(IntPtr addon, uint a2, IntPtr dataPtr);
     private readonly EzHook<AddonOnSetup> _retainerSellSetup;
 
@@ -99,10 +95,7 @@ namespace Dagobert
       try
       {
         if (a3 != null)
-        {
-          var ptr = (IntPtr)a2;
-          ParseNetworkEvent(ptr, PennyPincherPacketType.MarketBoardItemRequestStart);
-        }
+          ParseNetworkEvent(PennyPincherPacketType.MarketBoardItemRequestStart);
       }
       catch (Exception e)
       {
@@ -112,7 +105,7 @@ namespace Dagobert
       return _marketBoardItemRequestStartHook!.Original(a1, a2, a3);
     }
 
-    private void ParseNetworkEvent(IntPtr dataPtr, PennyPincherPacketType packetType)
+    private void ParseNetworkEvent(PennyPincherPacketType packetType)
     {
       if (packetType == PennyPincherPacketType.MarketBoardItemRequestStart)
       {
@@ -129,11 +122,6 @@ namespace Dagobert
       itemHq = nodeText.Contains('\uE03C');
 
       return result;
-    }
-
-    private bool Retainer()
-    {
-      return (getFilePtr != null) && Marshal.ReadInt64(getFilePtr(7), 0xB0) != 0;
     }
 
     private unsafe bool IsOwnRetainer(ulong retainerId)
