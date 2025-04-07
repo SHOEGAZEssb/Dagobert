@@ -1,34 +1,22 @@
-﻿using Dalamud.Game.Network.Structures;
-using Dalamud.Utility.Signatures;
+﻿using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Game.Network.Structures;
 using ECommons.DalamudServices;
-using ECommons.EzHookManager;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using Lumina.Excel.Sheets;
 using System;
 using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace Dagobert
 {
   internal unsafe class MarketBoardHandler : IDisposable
   {
-    enum PennyPincherPacketType
-    {
-      MarketBoardItemRequestStart,
-      MarketBoardOfferings
-    }
-
-    private delegate IntPtr AddonOnSetup(IntPtr addon, uint a2, IntPtr dataPtr);
-    private readonly EzHook<AddonOnSetup> _retainerSellSetup;
-
-    private unsafe delegate void* MarketBoardItemRequestStart(int* a1, int* a2, int* a3);
-    private readonly EzHook<MarketBoardItemRequestStart> _marketBoardItemRequestStartHook;
-
-    private readonly Lumina.Excel.ExcelSheet<Item> items;
-    private bool newRequest;
-    private bool useHq;
-    private bool itemHq;
+    private readonly Lumina.Excel.ExcelSheet<Item> _items;
+    private bool _newRequest;
+    private bool _useHq;
+    private bool _itemHq;
+    private int _lastRequestId = -1;
 
     private int NewPrice
     {
@@ -45,30 +33,28 @@ namespace Dagobert
 
     public MarketBoardHandler()
     {
-      items = Svc.Data.GetExcelSheet<Item>();
+      _items = Svc.Data.GetExcelSheet<Item>();
 
       Plugin.MarketBoard.OfferingsReceived += MarketBoardOnOfferingsReceived;
 
-      _marketBoardItemRequestStartHook = new EzHook<MarketBoardItemRequestStart>("48 89 5C 24 ?? 57 48 83 EC 20 48 8B 0D ?? ?? ?? ?? 48 8B FA E8 ?? ?? ?? ?? 48 8B D8 48 85 C0 74 4A", MarketBoardItemRequestStartDetour);
-      _marketBoardItemRequestStartHook.Enable();
-      _retainerSellSetup = new EzHook<AddonOnSetup>("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC ?? 4C 89 74 24 ?? 49 8B F0 44 8B F2", AddonRetainerSell_OnSetup);
-      _retainerSellSetup.Enable();
+      Plugin.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "RetainerSell", AddonRetainerSellPostSetup);
+      Plugin.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "ItemSearchResult", ItemSearchResultPostSetup);
     }
 
     public void Dispose()
     {
       Plugin.MarketBoard.OfferingsReceived -= MarketBoardOnOfferingsReceived;
-      _marketBoardItemRequestStartHook.Disable();
-      _retainerSellSetup.Disable();
+      Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "RetainerSell", AddonRetainerSellPostSetup);
+      Plugin.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "ItemSearchResult", ItemSearchResultPostSetup);
     }
 
     private void MarketBoardOnOfferingsReceived(IMarketBoardCurrentOfferings currentOfferings)
     {
-      if (!newRequest)
+      if (!_newRequest)
         return;
 
       var i = 0;
-      if (useHq && items.Single(j => j.RowId == currentOfferings.ItemListings[0].ItemId).CanBeHq)
+      if (_useHq && _items.Single(j => j.RowId == currentOfferings.ItemListings[0].ItemId).CanBeHq)
       {
         while (i < currentOfferings.ItemListings.Count && (!currentOfferings.ItemListings[i].IsHq || IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId)))
           i++;
@@ -79,49 +65,31 @@ namespace Dagobert
           i++;
       }
 
-      if (i == currentOfferings.ItemListings.Count)
+      if (i >= currentOfferings.ItemListings.Count || currentOfferings.RequestId == _lastRequestId)
+      {
         NewPrice = -1;
+        return; // wait for more incoming offerings (currentOfferings only contains 10 per call)
+      }
       else
       {
         var price = currentOfferings.ItemListings[i].PricePerUnit - 1;
         NewPrice = (int)price;
       }
 
-      newRequest = false;
+      _lastRequestId = currentOfferings.RequestId;
+      _newRequest = false;
     }
 
-    private unsafe void* MarketBoardItemRequestStartDetour(int* a1, int* a2, int* a3)
+    private void ItemSearchResultPostSetup(AddonEvent type, AddonArgs args)
     {
-      try
-      {
-        if (a3 != null)
-          ParseNetworkEvent(PennyPincherPacketType.MarketBoardItemRequestStart);
-      }
-      catch (Exception e)
-      {
-        Svc.Log.Error(e, "Market board item request start detour crashed while parsing.");
-      }
-
-      return _marketBoardItemRequestStartHook!.Original(a1, a2, a3);
+      _newRequest = true;
+      _useHq = Plugin.Configuration.HQ && _itemHq;
     }
 
-    private void ParseNetworkEvent(PennyPincherPacketType packetType)
+    private unsafe void AddonRetainerSellPostSetup(AddonEvent type, AddonArgs args)
     {
-      if (packetType == PennyPincherPacketType.MarketBoardItemRequestStart)
-      {
-        newRequest = true;
-        useHq = Plugin.Configuration.HQ && itemHq;
-      }
-    }
-
-    private unsafe IntPtr AddonRetainerSell_OnSetup(IntPtr addon, uint a2, IntPtr dataPtr)
-    {
-      var result = _retainerSellSetup.Original(addon, a2, dataPtr);
-
-      string nodeText = ((AddonRetainerSell*)addon)->ItemName->NodeText.ToString();
-      itemHq = nodeText.Contains('\uE03C');
-
-      return result;
+      string nodeText = ((AddonRetainerSell*)args.Addon)->ItemName->NodeText.ToString();
+      _itemHq = nodeText.Contains('\uE03C');
     }
 
     private unsafe bool IsOwnRetainer(ulong retainerId)
@@ -130,9 +98,7 @@ namespace Dagobert
       for (uint i = 0; i < retainerManager->GetRetainerCount(); ++i)
       {
         if (retainerId == retainerManager->GetRetainerBySortedIndex(i)->RetainerId)
-        {
           return true;
-        }
       }
 
       return false;
