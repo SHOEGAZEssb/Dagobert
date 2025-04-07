@@ -28,6 +28,58 @@ public class ConfigWindow : Window
       ImGui.EndTooltip();
     }
 
+    ImGui.BeginGroup();
+    ImGui.Text("Undercut Mode:");
+    ImGui.SameLine();
+    var enumValues = Enum.GetNames<UndercutMode>();
+    int index = Array.IndexOf(enumValues, Plugin.Configuration.UndercutMode.ToString());
+    if (ImGui.Combo("##undercutModeCombo", ref index, enumValues, enumValues.Length))
+    {
+      var value = Enum.Parse<UndercutMode>(enumValues[index]);
+      if (value == UndercutMode.Percentage && Plugin.Configuration.UndercutAmount >= 100)
+        Plugin.Configuration.UndercutAmount = 1;
+
+      Plugin.Configuration.UndercutMode = value;
+      Plugin.Configuration.Save();
+    }
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Defines wether to undercut by a fixed Gil amount or use a percentage");
+      ImGui.EndTooltip();
+    }
+
+    ImGui.BeginGroup();
+    ImGui.Text("Undercut amount:");
+    ImGui.SameLine();
+    int amount = Plugin.Configuration.UndercutAmount;
+    if (Plugin.Configuration.UndercutMode == UndercutMode.FixedAmount)
+    {
+      if (ImGui.InputInt("##undercutAmountFixed", ref amount))
+      {
+        Plugin.Configuration.UndercutAmount = Math.Clamp(amount, 1, int.MaxValue);
+        Plugin.Configuration.Save();
+      }
+    }
+    else
+    {
+      if (ImGui.SliderInt("##undercutAmountPercentage", ref amount, 1, 99))
+      {
+        Plugin.Configuration.UndercutAmount = amount;
+        Plugin.Configuration.Save();
+      }
+    }
+    ImGui.SameLine();
+    ImGui.Text($"{(Plugin.Configuration.UndercutMode == UndercutMode.FixedAmount ? "Gil" : "%%")}");
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Sets the amount by which to undercut");
+      ImGui.EndTooltip();
+    }
+
     int currentMBDelay = Plugin.Configuration.GetMBPricesDelayMS;
     ImGui.BeginGroup();
     ImGui.Text("Market Board Price Check Delay (ms)");
@@ -79,7 +131,7 @@ public class ConfigWindow : Window
       ImGui.SameLine();
 
       string currentKey = Plugin.Configuration.PinchKey.ToString();
-      var index = Array.IndexOf(_virtualKeyStrings, currentKey);
+      index = Array.IndexOf(_virtualKeyStrings, currentKey);
       if (ImGui.Combo("##pinchKeyCombo", ref index, _virtualKeyStrings, _virtualKeyStrings.Length))
       {
         Plugin.Configuration.PinchKey = Enum.Parse<VirtualKey>(_virtualKeyStrings[index]);

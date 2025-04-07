@@ -4,6 +4,12 @@ using System;
 
 namespace Dagobert;
 
+public enum UndercutMode
+{
+  FixedAmount,
+  Percentage
+}
+
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
@@ -19,7 +25,10 @@ public class Configuration : IPluginConfiguration
 
   public VirtualKey PinchKey { get; set; } = VirtualKey.Q;
 
-  // the below exist just to make saving less cumbersome
+  public UndercutMode UndercutMode { get; set; } = UndercutMode.FixedAmount;
+
+  public int UndercutAmount { get; set; } = 1;
+
   public void Save()
   {
     Plugin.PluginInterface.SavePluginConfig(this);

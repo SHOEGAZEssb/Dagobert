@@ -72,8 +72,14 @@ namespace Dagobert
       }
       else
       {
-        var price = currentOfferings.ItemListings[i].PricePerUnit - 1;
-        NewPrice = (int)price;
+        int price;
+
+        if (Plugin.Configuration.UndercutMode == UndercutMode.FixedAmount)
+          price = Math.Max((int)currentOfferings.ItemListings[i].PricePerUnit - Plugin.Configuration.UndercutAmount, 1);
+        else
+          price = Math.Max((100 - Plugin.Configuration.UndercutAmount) * (int)currentOfferings.ItemListings[i].PricePerUnit / 100, 1);
+
+        NewPrice = price;
       }
 
       _lastRequestId = currentOfferings.RequestId;
