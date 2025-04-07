@@ -11,8 +11,6 @@ public class Configuration : IPluginConfiguration
 
   public bool HQ { get; set; } = true;
 
-  public int GetAddonMaxTimeoutMS { get; set; } = 5000;
-
   public int GetMBPricesDelayMS { get; set; } = 3000;
 
   public bool ShowErrorsInChat { get; set; } = true;
