@@ -1,10 +1,13 @@
-﻿using Dalamud.Interface.Utility;
+﻿using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using ECommons;
 using ECommons.Automation;
 using ECommons.Automation.LegacyTaskManager;
 using ECommons.DalamudServices;
 using ECommons.ImGuiMethods;
+using ECommons.UIHelpers.AddonMasterImplementations;
 using ECommons.UIHelpers.AtkReaderImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Common.Math;
@@ -59,47 +62,8 @@ namespace Dagobert
     {
       try
       {
-        float oldSize = 0;
-        unsafe
-        {
-          if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
-          {
-            if (Plugin.Configuration.EnablePinchKey && Plugin.KeyState[Plugin.Configuration.PinchKey])
-              PinchAll();
-
-            var node = addon->UldManager.NodeList[17];
-
-            if (node == null)
-              return;
-
-            var position = GetNodePosition(node);
-            var scale = GetNodeScale(node);
-            var size = new Vector2(node->Width, node->Height) * scale;
-
-            ImGuiHelpers.ForceNextWindowMainViewport();
-            ImGuiHelpers.SetNextWindowPosRelativeMainViewport(position);
-
-            ImGui.PushStyleColor(ImGuiCol.WindowBg, 0);
-            oldSize = ImGui.GetFont().Scale;
-            ImGui.GetFont().Scale *= scale.X;
-            ImGui.PushFont(ImGui.GetFont());
-            ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0f.Scale());
-            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(3f.Scale(), 3f.Scale()));
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0f.Scale(), 0f.Scale()));
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f.Scale());
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, size);
-            ImGui.Begin($"###AutoPinch{node->NodeId}", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNavFocus
-                | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
-
-            DrawAutoPinchButton();
-
-            ImGui.End();
-            ImGui.PopStyleVar(5);
-            ImGui.GetFont().Scale = oldSize;
-            ImGui.PopFont();
-            ImGui.PopStyleColor();
-          }
-        }
+        DrawForRetainerList();
+        DrawForRetainerSellList();
       }
       catch (Exception ex)
       {
@@ -107,15 +71,107 @@ namespace Dagobert
         Svc.Log.Error(ex, "Error while auto pinching");
         if (Plugin.Configuration.ShowErrorsInChat)
           Svc.Chat.PrintError($"Error while auto pinching: {ex.Message}");
+
+        RemoveAddonListeners();
       }
     }
 
-    private void DrawAutoPinchButton()
+    private void DrawForRetainerList()
+    {
+      float oldSize = 0;
+      unsafe
+      {
+        if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
+        {
+          var node = addon->UldManager.NodeList[27];
+
+          if (node == null)
+            return;
+
+          var position = GetNodePosition(node);
+          var scale = GetNodeScale(node);
+          var size = new Vector2(node->Width, node->Height) * scale;
+
+          ImGuiHelpers.ForceNextWindowMainViewport();
+          ImGuiHelpers.SetNextWindowPosRelativeMainViewport(position);
+
+          ImGui.PushStyleColor(ImGuiCol.WindowBg, 0);
+          oldSize = ImGui.GetFont().Scale;
+          ImGui.GetFont().Scale *= scale.X;
+          ImGui.PushFont(ImGui.GetFont());
+          ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0f.Scale());
+          ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(3f.Scale(), 3f.Scale()));
+          ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0f.Scale(), 0f.Scale()));
+          ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f.Scale());
+          ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, size);
+          ImGui.Begin($"###AutoPinch{node->NodeId}", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNavFocus
+              | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
+
+          DrawAutoPinchButton(PinchAllRetainers);
+
+          ImGui.End();
+          ImGui.PopStyleVar(5);
+          ImGui.GetFont().Scale = oldSize;
+          ImGui.PopFont();
+          ImGui.PopStyleColor();
+        }
+      }
+    }
+
+    private void DrawForRetainerSellList()
+    {
+      float oldSize = 0;
+      unsafe
+      {
+        if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
+        {
+          if (Plugin.Configuration.EnablePinchKey && Plugin.KeyState[Plugin.Configuration.PinchKey])
+            PinchAllRetainerItems();
+
+          var node = addon->UldManager.NodeList[17];
+
+          if (node == null)
+            return;
+
+          var position = GetNodePosition(node);
+          var scale = GetNodeScale(node);
+          var size = new Vector2(node->Width, node->Height) * scale;
+
+          ImGuiHelpers.ForceNextWindowMainViewport();
+          ImGuiHelpers.SetNextWindowPosRelativeMainViewport(position);
+
+          ImGui.PushStyleColor(ImGuiCol.WindowBg, 0);
+          oldSize = ImGui.GetFont().Scale;
+          ImGui.GetFont().Scale *= scale.X;
+          ImGui.PushFont(ImGui.GetFont());
+          ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0f.Scale());
+          ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(3f.Scale(), 3f.Scale()));
+          ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0f.Scale(), 0f.Scale()));
+          ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f.Scale());
+          ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, size);
+          ImGui.Begin($"###AutoPinch{node->NodeId}", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNavFocus
+              | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
+
+          DrawAutoPinchButton(PinchAllRetainerItems);
+          
+          ImGui.End();
+          ImGui.PopStyleVar(5);
+          ImGui.GetFont().Scale = oldSize;
+          ImGui.PopFont();
+          ImGui.PopStyleColor();
+        }
+      }
+    }
+
+    private void DrawAutoPinchButton(Action specificPinchFunction)
     {
       if (_taskManager.IsBusy)
       {
         if (ImGui.Button("Cancel"))
+        {
           _taskManager.Abort();
+          RemoveAddonListeners();
+        }
         if (ImGui.IsItemHovered())
         {
           ImGui.BeginTooltip();
@@ -126,7 +182,7 @@ namespace Dagobert
       else
       {
         if (ImGui.Button("Auto Pinch"))
-          PinchAll();
+          specificPinchFunction();
         if (ImGui.IsItemHovered())
         {
           ImGui.BeginTooltip();
@@ -137,25 +193,133 @@ namespace Dagobert
       }
     }
 
-    private unsafe void PinchAll()
+    private unsafe void PinchAllRetainers()
     {
       if (_taskManager.IsBusy)
         return;
 
-      _newPrice = null;
-      _cachedPrices = [];
-      _skipCurrentItem = false;
+      ClearState();
+      if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
+      {
+        Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "Talk", SkipRetainerDialog);
+        Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "Talk", SkipRetainerDialog);
 
+        // we cache the number of retainers because AddonMaster will be disposed once the RetainerList addon is closed.
+        var num = new AddonMaster.RetainerList(addon).Retainers.Length;
+        for (int i = 0; i < num; i++)
+        {
+          EnqueueSingleRetainer(i);
+        }
+
+        _taskManager.Enqueue(RemoveAddonListeners);
+      }
+    }
+
+    private void EnqueueSingleRetainer(int index)
+    {
+      _taskManager.Enqueue(() => ClickRetainer(index), $"ClickRetainer{index}");
+      _taskManager.DelayNext(100);
+      _taskManager.Enqueue(ClickSellItems, $"ClickSellItems{index}");
+      _taskManager.DelayNext(500);
+      _taskManager.Enqueue(() => EnqueueAllRetainerItems(InsertSingleItem, true), $"EnqueueAllRetainerItems{index}");
+      _taskManager.DelayNext(500);
+      _taskManager.Enqueue(CloseRetainerSellList, $"CloseRetainerSellList{index}");
+      _taskManager.DelayNext(100);
+      _taskManager.Enqueue(CloseRetainer, $"CloseRetainer{index}");
+      _taskManager.DelayNext(100);
+    }
+
+    private static unsafe bool? ClickRetainer(int index)
+    {
+      if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
+      {
+        Callback.Fire(addon, true, 2, index);
+        return true;
+      }
+      else
+        return false;
+    }
+
+    private static unsafe bool? ClickSellItems()
+    {
+      if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("SelectString", out var addon) && GenericHelpers.IsAddonReady(addon))
+      {
+        new AddonMaster.SelectString(addon).Entries[2].Select();
+        return true;
+      }
+      else
+        return false;
+    }
+
+    private static unsafe bool? CloseRetainerSellList()
+    {
+      if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
+      {
+        addon->Close(true);
+        return true;
+      }
+      else
+        return false;
+    }
+
+    private static unsafe bool? CloseRetainer()
+    {
+      if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("SelectString", out var addon) && GenericHelpers.IsAddonReady(addon))
+      {
+        addon->Close(true);
+        return true;
+      }
+      else
+        return false;
+    }
+
+    private unsafe void SkipRetainerDialog(AddonEvent type, AddonArgs args)
+    {
+      // fallback for when something was improperly cleaned up
+      if (!_taskManager.IsBusy)
+        RemoveAddonListeners();
+      else
+      {
+        if (((AtkUnitBase*)args.Addon)->IsVisible)
+          new AddonMaster.Talk(args.Addon).Click();
+      }
+    }
+
+    private unsafe void PinchAllRetainerItems()
+    {
+      if (_taskManager.IsBusy)
+        return;
+
+      ClearState();
+      EnqueueAllRetainerItems(EnqueueSingleItem, false);
+    }
+
+    private unsafe bool? EnqueueAllRetainerItems(Action<int> enqueueFunc, bool reverseOrder)
+    {
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
         var listNode = (AtkComponentNode*)addon->UldManager.NodeList[10];
         var listComponent = (AtkComponentList*)listNode->Component;
         int num = listComponent->ListLength;
-        for (int i = 0; i < num; i++)
+        if (reverseOrder)
         {
-          EnqueueSingleItem(i);
+          for (int i = num - 1; i >= 0; i--)
+          {
+            enqueueFunc(i);
+          }
         }
+        else
+        {
+          for (int i = 0; i < num; i++)
+          {
+            enqueueFunc(i);
+          }
+        }
+
+        return true;
       }
+      else
+        return false;
     }
 
     private void EnqueueSingleItem(int index)
@@ -168,6 +332,19 @@ namespace Dagobert
       _taskManager.Enqueue(ClickComparePrice, $"ClickComparePrice{index}");
       _taskManager.DelayNext(1000);
       _taskManager.Enqueue(SetNewPrice, $"SetNewPrice{index}");
+    }
+
+    private void InsertSingleItem(int index)
+    {
+      // reverse order because we INSERT
+      _taskManager.Insert(SetNewPrice, $"SetNewPrice{index}");
+      _taskManager.InsertDelayNext(1000);
+      _taskManager.Insert(ClickComparePrice, $"ClickComparePrice{index}");
+      _taskManager.Insert(DelayMarketBoard, $"DelayMB{index}");
+      _taskManager.InsertDelayNext(100);
+      _taskManager.Insert(ClickAdjustPrice, $"ClickAdjustPrice{index}");
+      _taskManager.InsertDelayNext(100);
+      _taskManager.Insert(() => OpenItemContextMenu(index), $"OpenItemContextMenu{index}");
     }
 
     private static unsafe bool? OpenItemContextMenu(int itemIndex)
@@ -230,7 +407,7 @@ namespace Dagobert
         if (!_cachedPrices.TryGetValue(itemName, out int? value) || value <= 0)
         {
           Svc.Log.Debug($"{itemName} has no cached price (or that price was <= 0), delaying next mb open");
-          _taskManager.DelayNextImmediate(Plugin.Configuration.GetMBPricesDelayMS);
+          _taskManager.InsertDelayNext(Plugin.Configuration.GetMBPricesDelayMS);
         }
 
         return true;
@@ -282,7 +459,7 @@ namespace Dagobert
           var itemName = retainerSell->ItemName->NodeText.ToString();
           if (_newPrice.HasValue && _newPrice > 0)
           {
-            Svc.Log.Debug($"Setting new price");            
+            Svc.Log.Debug($"Setting new price");
             _cachedPrices.TryAdd(itemName, _newPrice);
 
             retainerSell->AskingPrice->SetValue(_newPrice.Value);
@@ -341,6 +518,19 @@ namespace Dagobert
       }
 
       return scale;
+    }
+
+    private void ClearState()
+    {
+      _newPrice = null;
+      _cachedPrices = [];
+      _skipCurrentItem = false;
+    }
+
+    private void RemoveAddonListeners()
+    {
+      Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "Talk", SkipRetainerDialog);
+      Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostUpdate, "Talk", SkipRetainerDialog);
     }
   }
 }
