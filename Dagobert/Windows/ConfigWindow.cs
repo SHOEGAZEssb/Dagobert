@@ -101,7 +101,7 @@ public class ConfigWindow : Window
     int currentMBKeepOpenDelay = Plugin.Configuration.MarketBoardKeepOpenMS;
     ImGui.BeginGroup();
     ImGui.Text("Market Board Keep Open Time (ms)");
-    if (ImGui.SliderInt("###sliderMBDelay", ref currentMBKeepOpenDelay, 1, 10000))
+    if (ImGui.SliderInt("###sliderMBKeepOpen", ref currentMBKeepOpenDelay, 1, 10000))
     {
       Plugin.Configuration.MarketBoardKeepOpenMS = currentMBKeepOpenDelay;
       Plugin.Configuration.Save();
