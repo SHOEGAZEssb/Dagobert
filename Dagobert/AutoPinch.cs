@@ -82,6 +82,9 @@ namespace Dagobert
       {
         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
         {
+          if (Plugin.Configuration.EnablePinchKey && Plugin.KeyState[Plugin.Configuration.PinchKey])
+            PinchAllRetainerItems();
+
           var node = addon->UldManager.NodeList[27];
 
           if (node == null)
@@ -315,7 +318,7 @@ namespace Dagobert
       _taskManager.DelayNext(100);
       _taskManager.Enqueue(DelayMarketBoard, $"DelayMB{index}");
       _taskManager.Enqueue(ClickComparePrice, $"ClickComparePrice{index}");
-      _taskManager.DelayNext(1000);
+      _taskManager.DelayNext(Plugin.Configuration.MarketBoardKeepOpenMS);
       _taskManager.Enqueue(SetNewPrice, $"SetNewPrice{index}");
     }
 
@@ -323,7 +326,7 @@ namespace Dagobert
     {
       // reverse order because we INSERT
       _taskManager.Insert(SetNewPrice, $"SetNewPrice{index}");
-      _taskManager.InsertDelayNext(1000);
+      _taskManager.InsertDelayNext(Plugin.Configuration.MarketBoardKeepOpenMS);
       _taskManager.Insert(ClickComparePrice, $"ClickComparePrice{index}");
       _taskManager.Insert(DelayMarketBoard, $"DelayMB{index}");
       _taskManager.InsertDelayNext(100);

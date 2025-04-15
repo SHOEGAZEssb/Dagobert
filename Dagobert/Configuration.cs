@@ -19,6 +19,8 @@ public class Configuration : IPluginConfiguration
 
   public int GetMBPricesDelayMS { get; set; } = 3000;
 
+  public int MarketBoardKeepOpenMS { get; set; } = 1000;
+
   public bool ShowErrorsInChat { get; set; } = true;
 
   public bool EnablePinchKey { get; set; } = false;

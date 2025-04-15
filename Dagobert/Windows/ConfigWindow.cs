@@ -94,7 +94,25 @@ public class ConfigWindow : Window
       ImGui.BeginTooltip();
       ImGui.SetTooltip("Delay in milliseconds before opening the market board price list.\r\n" +
                        "Lower delay means faster auto pinching but may also cause market board price data to be unable to load.\r\n" +
-                       "Recommended to keep between 3000 and 4000. Reduce at your own risk!");
+                       "Recommended to keep between 3000 and 4000ms. Reduce at your own risk!");
+      ImGui.EndTooltip();
+    }
+
+    int currentMBKeepOpenDelay = Plugin.Configuration.MarketBoardKeepOpenMS;
+    ImGui.BeginGroup();
+    ImGui.Text("Market Board Keep Open Time (ms)");
+    if (ImGui.SliderInt("###sliderMBDelay", ref currentMBKeepOpenDelay, 1, 10000))
+    {
+      Plugin.Configuration.MarketBoardKeepOpenMS = currentMBKeepOpenDelay;
+      Plugin.Configuration.Save();
+    }
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Time in milliseconds to keep the marketboard open when fetching prices.\r\n" +
+                       "Lower delay means faster auto pinching but may also cause market board price data to be unable to load.\r\n" +
+                       "Recommended to keep between 1000 and 2000ms. Reduce at your own risk!");
       ImGui.EndTooltip();
     }
 
