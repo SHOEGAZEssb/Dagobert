@@ -78,7 +78,6 @@ namespace Dagobert
 
     private void DrawForRetainerList()
     {
-      float oldSize = 0;
       unsafe
       {
         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
@@ -88,39 +87,15 @@ namespace Dagobert
           if (node == null)
             return;
 
-          var position = GetNodePosition(node);
-          var scale = GetNodeScale(node);
-          var size = new Vector2(node->Width, node->Height) * scale;
-
-          ImGuiHelpers.ForceNextWindowMainViewport();
-          ImGuiHelpers.SetNextWindowPosRelativeMainViewport(position);
-
-          ImGui.PushStyleColor(ImGuiCol.WindowBg, 0);
-          oldSize = ImGui.GetFont().Scale;
-          ImGui.GetFont().Scale *= scale.X;
-          ImGui.PushFont(ImGui.GetFont());
-          ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0f.Scale());
-          ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(3f.Scale(), 3f.Scale()));
-          ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0f.Scale(), 0f.Scale()));
-          ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f.Scale());
-          ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, size);
-          ImGui.Begin($"###AutoPinch{node->NodeId}", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNavFocus
-              | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
-
+          var oldSize = ImGuiSetup(node);
           DrawAutoPinchButton(PinchAllRetainers);
-
-          ImGui.End();
-          ImGui.PopStyleVar(5);
-          ImGui.GetFont().Scale = oldSize;
-          ImGui.PopFont();
-          ImGui.PopStyleColor();
+          ImGuiPostSetup(oldSize);
         }
       }
     }
 
     private void DrawForRetainerSellList()
     {
-      float oldSize = 0;
       unsafe
       {
         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
@@ -133,34 +108,44 @@ namespace Dagobert
           if (node == null)
             return;
 
-          var position = GetNodePosition(node);
-          var scale = GetNodeScale(node);
-          var size = new Vector2(node->Width, node->Height) * scale;
-
-          ImGuiHelpers.ForceNextWindowMainViewport();
-          ImGuiHelpers.SetNextWindowPosRelativeMainViewport(position);
-
-          ImGui.PushStyleColor(ImGuiCol.WindowBg, 0);
-          oldSize = ImGui.GetFont().Scale;
-          ImGui.GetFont().Scale *= scale.X;
-          ImGui.PushFont(ImGui.GetFont());
-          ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0f.Scale());
-          ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(3f.Scale(), 3f.Scale()));
-          ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0f.Scale(), 0f.Scale()));
-          ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f.Scale());
-          ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, size);
-          ImGui.Begin($"###AutoPinch{node->NodeId}", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNavFocus
-              | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
-
+          var oldSize = ImGuiSetup(node);
           DrawAutoPinchButton(PinchAllRetainerItems);
-          
-          ImGui.End();
-          ImGui.PopStyleVar(5);
-          ImGui.GetFont().Scale = oldSize;
-          ImGui.PopFont();
-          ImGui.PopStyleColor();
+          ImGuiPostSetup(oldSize);
         }
       }
+    }
+
+    private unsafe float ImGuiSetup(AtkResNode* node)
+    {
+      var position = GetNodePosition(node);
+      var scale = GetNodeScale(node);
+      var size = new Vector2(node->Width, node->Height) * scale;
+
+      ImGuiHelpers.ForceNextWindowMainViewport();
+      ImGuiHelpers.SetNextWindowPosRelativeMainViewport(position);
+
+      ImGui.PushStyleColor(ImGuiCol.WindowBg, 0);
+      var oldSize = ImGui.GetFont().Scale;
+      ImGui.GetFont().Scale *= scale.X;
+      ImGui.PushFont(ImGui.GetFont());
+      ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0f.Scale());
+      ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(3f.Scale(), 3f.Scale()));
+      ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0f.Scale(), 0f.Scale()));
+      ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f.Scale());
+      ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, size);
+      ImGui.Begin($"###AutoPinch{node->NodeId}", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoNavFocus
+          | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoSavedSettings);
+
+      return oldSize;
+    }
+
+    private void ImGuiPostSetup(float oldSize)
+    {
+      ImGui.End();
+      ImGui.PopStyleVar(5);
+      ImGui.GetFont().Scale = oldSize;
+      ImGui.PopFont();
+      ImGui.PopStyleColor();
     }
 
     private void DrawAutoPinchButton(Action specificPinchFunction)
