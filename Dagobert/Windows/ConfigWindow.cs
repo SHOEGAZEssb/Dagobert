@@ -5,7 +5,7 @@ using System;
 
 namespace Dagobert.Windows;
 
-public class ConfigWindow : Window
+public sealed class ConfigWindow : Window
 {
   private readonly string[] _virtualKeyStrings = Enum.GetNames<VirtualKey>();
 
@@ -126,6 +126,41 @@ public class ConfigWindow : Window
     {
       ImGui.BeginTooltip();
       ImGui.SetTooltip("If enabled shows pinching errors in the chat.");
+      ImGui.EndTooltip();
+    }
+
+    bool enablePostPinchKey = Plugin.Configuration.EnablePostPinchkey;
+    if (ImGui.Checkbox("Enable Post Pinch Hotkey", ref enablePostPinchKey))
+    {
+      Plugin.Configuration.EnablePostPinchkey = enablePostPinchKey;
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("If enabled allows you to hold a specified key to automatically get the lowest price when posting an item to the market board.");
+      ImGui.EndTooltip();
+    }
+
+    ImGui.BeginGroup();
+    if (enablePostPinchKey)
+    {
+      ImGui.Text("Auto Post Pinch Key:");
+      ImGui.SameLine();
+
+      index = Array.IndexOf(_virtualKeyStrings, Plugin.Configuration.PostPinchKey.ToString());
+      if (ImGui.Combo("##postPinchKeyCombo", ref index, _virtualKeyStrings, _virtualKeyStrings.Length))
+      {
+        Plugin.Configuration.PostPinchKey = Enum.Parse<VirtualKey>(_virtualKeyStrings[index]);
+        Plugin.Configuration.Save();
+      }
+    }
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("The key to hold to start the auto pinching process for the newly posted item.\r\n" +
+                       "Be aware that the configured key still does every other hotkey action it is configured for.");
       ImGui.EndTooltip();
     }
 

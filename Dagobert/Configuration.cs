@@ -11,7 +11,7 @@ public enum UndercutMode
 }
 
 [Serializable]
-public class Configuration : IPluginConfiguration
+public sealed class Configuration : IPluginConfiguration
 {
   public int Version { get; set; } = 0;
 
@@ -26,6 +26,10 @@ public class Configuration : IPluginConfiguration
   public bool EnablePinchKey { get; set; } = false;
 
   public VirtualKey PinchKey { get; set; } = VirtualKey.Q;
+
+  public bool EnablePostPinchkey { get; set; } = true;
+
+  public VirtualKey PostPinchKey { get; set; } = VirtualKey.SHIFT;
 
   public UndercutMode UndercutMode { get; set; } = UndercutMode.FixedAmount;
 

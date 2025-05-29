@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Dagobert
 {
-  internal unsafe class MarketBoardHandler : IDisposable
+  internal unsafe sealed class MarketBoardHandler : IDisposable
   {
     private readonly Lumina.Excel.ExcelSheet<Item> _items;
     private bool _newRequest;

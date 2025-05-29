@@ -1,5 +1,6 @@
 ﻿using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using ECommons;
@@ -20,7 +21,7 @@ using static ECommons.UIHelpers.AtkReaderImplementations.ReaderContextMenu;
 
 namespace Dagobert
 {
-  internal class AutoPinch : Window, IDisposable
+  internal sealed class AutoPinch : Window, IDisposable
   {
     private readonly MarketBoardHandler _mbHandler;
     private int? _newPrice;
@@ -50,10 +51,13 @@ namespace Dagobert
         TimeLimitMS = 10000,
         AbortOnTimeout = true
       };
+
+      Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, RetainerSellPostSetup);
     }
 
     public void Dispose()
     {
+      Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, RetainerSellPostSetup);
       _mbHandler.NewPriceReceived -= MBHandler_NewPriceReceived;
       _mbHandler.Dispose();
     }
@@ -72,7 +76,7 @@ namespace Dagobert
         if (Plugin.Configuration.ShowErrorsInChat)
           Svc.Chat.PrintError($"Error while auto pinching: {ex.Message}");
 
-        RemoveAddonListeners();
+        RemoveTalkAddonListeners();
       }
     }
 
@@ -142,7 +146,7 @@ namespace Dagobert
       return oldSize;
     }
 
-    private void ImGuiPostSetup(float oldSize)
+    private static void ImGuiPostSetup(float oldSize)
     {
       ImGui.End();
       ImGui.PopStyleVar(5);
@@ -158,7 +162,7 @@ namespace Dagobert
         if (ImGui.Button("Cancel"))
         {
           _taskManager.Abort();
-          RemoveAddonListeners();
+          RemoveTalkAddonListeners();
         }
         if (ImGui.IsItemHovered())
         {
@@ -199,7 +203,7 @@ namespace Dagobert
           EnqueueSingleRetainer(i);
         }
 
-        _taskManager.Enqueue(RemoveAddonListeners);
+        _taskManager.Enqueue(RemoveTalkAddonListeners);
       }
     }
 
@@ -265,11 +269,24 @@ namespace Dagobert
     {
       // fallback for when something was improperly cleaned up
       if (!_taskManager.IsBusy)
-        RemoveAddonListeners();
+        RemoveTalkAddonListeners();
       else
       {
         if (((AtkUnitBase*)args.Addon)->IsVisible)
           new AddonMaster.Talk(args.Addon).Click();
+      }
+    }
+
+    private void RetainerSellPostSetup(AddonEvent type, AddonArgs args)
+    {
+      if (_taskManager.IsBusy)
+        return;
+
+      if (Plugin.Configuration.EnablePostPinchkey && Plugin.KeyState[Plugin.Configuration.PostPinchKey])
+      {
+        _taskManager.Enqueue(ClickComparePrice, $"ClickComparePricePosted");
+        _taskManager.DelayNext(Plugin.Configuration.MarketBoardKeepOpenMS);
+        _taskManager.Enqueue(SetNewPrice, $"SetNewPricePosted");
       }
     }
 
@@ -481,7 +498,7 @@ namespace Dagobert
       _newPrice = e.NewPrice;
     }
 
-    public static unsafe Vector2 GetNodePosition(AtkResNode* node)
+    private static unsafe Vector2 GetNodePosition(AtkResNode* node)
     {
       var pos = new Vector2(node->X, node->Y);
       var par = node->ParentNode;
@@ -495,7 +512,7 @@ namespace Dagobert
       return pos;
     }
 
-    public static unsafe Vector2 GetNodeScale(AtkResNode* node)
+    private static unsafe Vector2 GetNodeScale(AtkResNode* node)
     {
       if (node == null) return new Vector2(1, 1);
       var scale = new Vector2(node->ScaleX, node->ScaleY);
@@ -515,7 +532,7 @@ namespace Dagobert
       _skipCurrentItem = false;
     }
 
-    private void RemoveAddonListeners()
+    private void RemoveTalkAddonListeners()
     {
       Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "Talk", SkipRetainerDialog);
       Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostUpdate, "Talk", SkipRetainerDialog);
