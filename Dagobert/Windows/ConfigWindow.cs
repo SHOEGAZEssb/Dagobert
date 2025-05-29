@@ -7,7 +7,7 @@ namespace Dagobert.Windows;
 
 public sealed class ConfigWindow : Window
 {
-  private readonly string[] _virtualKeyStrings = Enum.GetNames<VirtualKey>();
+  private static readonly string[] _virtualKeyStrings = Enum.GetNames<VirtualKey>();
 
   public ConfigWindow()
     : base("Dagobert Configuration")

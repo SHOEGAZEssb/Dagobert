@@ -265,31 +265,6 @@ namespace Dagobert
         return false;
     }
 
-    private unsafe void SkipRetainerDialog(AddonEvent type, AddonArgs args)
-    {
-      // fallback for when something was improperly cleaned up
-      if (!_taskManager.IsBusy)
-        RemoveTalkAddonListeners();
-      else
-      {
-        if (((AtkUnitBase*)args.Addon)->IsVisible)
-          new AddonMaster.Talk(args.Addon).Click();
-      }
-    }
-
-    private void RetainerSellPostSetup(AddonEvent type, AddonArgs args)
-    {
-      if (_taskManager.IsBusy)
-        return;
-
-      if (Plugin.Configuration.EnablePostPinchkey && Plugin.KeyState[Plugin.Configuration.PostPinchKey])
-      {
-        _taskManager.Enqueue(ClickComparePrice, $"ClickComparePricePosted");
-        _taskManager.DelayNext(Plugin.Configuration.MarketBoardKeepOpenMS);
-        _taskManager.Enqueue(SetNewPrice, $"SetNewPricePosted");
-      }
-    }
-
     private unsafe void PinchAllRetainerItems()
     {
       if (_taskManager.IsBusy)
@@ -498,6 +473,36 @@ namespace Dagobert
       _newPrice = e.NewPrice;
     }
 
+    private unsafe void SkipRetainerDialog(AddonEvent type, AddonArgs args)
+    {
+      // fallback for when something was improperly cleaned up
+      if (!_taskManager.IsBusy)
+        RemoveTalkAddonListeners();
+      else
+      {
+        if (((AtkUnitBase*)args.Addon)->IsVisible)
+          new AddonMaster.Talk(args.Addon).Click();
+      }
+    }
+
+    private void RetainerSellPostSetup(AddonEvent type, AddonArgs args)
+    {
+      if (_taskManager.IsBusy)
+        return;
+
+      if (Plugin.Configuration.EnablePostPinchkey && Plugin.KeyState[Plugin.Configuration.PostPinchKey])
+      {
+        _taskManager.Enqueue(ClickComparePrice, $"ClickComparePricePosted");
+        _taskManager.DelayNext(Plugin.Configuration.MarketBoardKeepOpenMS);
+        _taskManager.Enqueue(SetNewPrice, $"SetNewPricePosted");
+      }
+    }
+    private void RemoveTalkAddonListeners()
+    {
+      Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "Talk", SkipRetainerDialog);
+      Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostUpdate, "Talk", SkipRetainerDialog);
+    }
+
     private static unsafe Vector2 GetNodePosition(AtkResNode* node)
     {
       var pos = new Vector2(node->X, node->Y);
@@ -530,12 +535,6 @@ namespace Dagobert
       _newPrice = null;
       _cachedPrices = [];
       _skipCurrentItem = false;
-    }
-
-    private void RemoveTalkAddonListeners()
-    {
-      Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "Talk", SkipRetainerDialog);
-      Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostUpdate, "Talk", SkipRetainerDialog);
     }
   }
 }
