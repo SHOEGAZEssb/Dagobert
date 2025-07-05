@@ -24,9 +24,11 @@ public sealed class ConfigWindow : Window
     if (ImGui.IsItemHovered())
     {
       ImGui.BeginTooltip();
-      ImGui.SetTooltip("If checked, will use the hq price (if item is hq), otherwise will use cheapest price, wether it's hq or not");
+      ImGui.SetTooltip("If checked, will use the hq price (if item is hq; will fail if there is no HQ price on the MB)");
       ImGui.EndTooltip();
     }
+
+    ImGui.Separator();
 
     ImGui.BeginGroup();
     ImGui.Text("Undercut Mode:");
@@ -80,6 +82,21 @@ public sealed class ConfigWindow : Window
       ImGui.EndTooltip();
     }
 
+    var undercutSelf = Plugin.Configuration.UndercutSelf;
+    if (ImGui.Checkbox("Undercut Self", ref undercutSelf))
+    {
+      Plugin.Configuration.UndercutSelf = undercutSelf;
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("If checked, your own retainer listings will be undercut");
+      ImGui.EndTooltip();
+    }
+
+    ImGui.Separator();
+
     int currentMBDelay = Plugin.Configuration.GetMBPricesDelayMS;
     ImGui.BeginGroup();
     ImGui.Text("Market Board Price Check Delay (ms)");
@@ -128,6 +145,8 @@ public sealed class ConfigWindow : Window
       ImGui.SetTooltip("If enabled shows pinching errors in the chat.");
       ImGui.EndTooltip();
     }
+
+    ImGui.Separator();
 
     bool enablePostPinchKey = Plugin.Configuration.EnablePostPinchkey;
     if (ImGui.Checkbox("Enable Post Pinch Hotkey", ref enablePostPinchKey))

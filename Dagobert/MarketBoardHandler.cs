@@ -56,13 +56,15 @@ namespace Dagobert
       var i = 0;
       if (_useHq && _items.Single(j => j.RowId == currentOfferings.ItemListings[0].ItemId).CanBeHq)
       {
-        while (i < currentOfferings.ItemListings.Count && (!currentOfferings.ItemListings[i].IsHq || IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId)))
+        while (i < currentOfferings.ItemListings.Count && !currentOfferings.ItemListings[i].IsHq)
           i++;
       }
       else
       {
-        while (i < currentOfferings.ItemListings.Count && IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId))
-          i++;
+        if (currentOfferings.ItemListings.Count > 0)
+          i = 0;
+        else
+          i = currentOfferings.ItemListings.Count;
       }
 
       if (i >= currentOfferings.ItemListings.Count || currentOfferings.RequestId == _lastRequestId)
@@ -74,7 +76,9 @@ namespace Dagobert
       {
         int price;
 
-        if (Plugin.Configuration.UndercutMode == UndercutMode.FixedAmount)
+        if (!Plugin.Configuration.UndercutSelf && IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId))
+          price = (int)currentOfferings.ItemListings[i].PricePerUnit;
+        else if (Plugin.Configuration.UndercutMode == UndercutMode.FixedAmount)
           price = Math.Max((int)currentOfferings.ItemListings[i].PricePerUnit - Plugin.Configuration.UndercutAmount, 1);
         else
           price = Math.Max((100 - Plugin.Configuration.UndercutAmount) * (int)currentOfferings.ItemListings[i].PricePerUnit / 100, 1);

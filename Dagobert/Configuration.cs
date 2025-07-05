@@ -35,6 +35,8 @@ public sealed class Configuration : IPluginConfiguration
 
   public int UndercutAmount { get; set; } = 1;
 
+  public bool UndercutSelf { get; set; } = false;
+
   public void Save()
   {
     Plugin.PluginInterface.SavePluginConfig(this);
