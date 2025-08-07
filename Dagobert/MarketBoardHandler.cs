@@ -98,7 +98,7 @@ namespace Dagobert
 
     private unsafe void AddonRetainerSellPostSetup(AddonEvent type, AddonArgs args)
     {
-      string nodeText = ((AddonRetainerSell*)args.Addon)->ItemName->NodeText.ToString();
+      string nodeText = ((AddonRetainerSell*)args.Addon.Address)->ItemName->NodeText.ToString();
       _itemHq = nodeText.Contains('\uE03C');
     }
 
