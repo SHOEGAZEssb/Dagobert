@@ -13,7 +13,7 @@ using ECommons.UIHelpers.AtkReaderImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -225,7 +225,7 @@ namespace Dagobert
     {
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
-        Callback.Fire(addon, true, 2, index);
+        ECommons.Automation.Callback.Fire(addon, true, 2, index);
         return true;
       }
       else
@@ -332,7 +332,7 @@ namespace Dagobert
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
         Svc.Log.Debug($"Clicking item {itemIndex}");
-        Callback.Fire(addon, true, 0, itemIndex, 1); // click item
+        ECommons.Automation.Callback.Fire(addon, true, 0, itemIndex, 1); // click item
         return true;
       }
 
@@ -347,7 +347,7 @@ namespace Dagobert
         if (!IsItemMannequin(reader.Entries))
         {
           Svc.Log.Debug($"Clicking adjust price");
-          Callback.Fire(addon, true, 0, 0, 0, 0, 0); // click adjust price
+          ECommons.Automation.Callback.Fire(addon, true, 0, 0, 0, 0, 0); // click adjust price
         }
         else
         {
@@ -414,7 +414,7 @@ namespace Dagobert
         else
         {
           Svc.Log.Debug($"Clicking compare prices");
-          Callback.Fire(&addon->AtkUnitBase, true, 4);
+          ECommons.Automation.Callback.Fire(&addon->AtkUnitBase, true, 4);
           return true;
         }
       }
@@ -443,7 +443,7 @@ namespace Dagobert
             _cachedPrices.TryAdd(itemName, _newPrice);
 
             retainerSell->AskingPrice->SetValue(_newPrice.Value);
-            Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
+            ECommons.Automation.Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
             ui->Close(true);
             return true;
           }
@@ -452,7 +452,7 @@ namespace Dagobert
             Svc.Log.Warning("SetNewPrice: No price to set");
             if (Plugin.Configuration.ShowErrorsInChat)
               Svc.Chat.PrintError($"{itemName}: No price to set, please set price manually");
-            Callback.Fire(&retainerSell->AtkUnitBase, true, 1); // cancel
+            ECommons.Automation.Callback.Fire(&retainerSell->AtkUnitBase, true, 1); // cancel
             ui->Close(true);
             return true;
           }
@@ -480,7 +480,7 @@ namespace Dagobert
         RemoveTalkAddonListeners();
       else
       {
-        if (((AtkUnitBase*)args.Addon)->IsVisible)
+        if (((AtkUnitBase*)args.Addon.Address)->IsVisible)
           new AddonMaster.Talk(args.Addon).Click();
       }
     }
