@@ -219,7 +219,7 @@ namespace Dagobert
 
         _taskManager.Enqueue(RemoveTalkAddonListeners);
         if (Plugin.Configuration.TTSWhenAllDone)
-          _taskManager.Enqueue(() => SpeakTTS("Finished auto pinching all retainers"), $"SpeakTTSAll");
+          _taskManager.Enqueue(() => SpeakTTS(Plugin.Configuration.TTSWhenAllDoneMsg), "SpeakTTSAll");
       }
     }
 
@@ -312,7 +312,7 @@ namespace Dagobert
           }
         }
         if (Plugin.Configuration.TTSWhenEachDone)
-          _taskManager.Enqueue(() => SpeakTTS("Auto Pinch done"), $"SpeakTTSEach");
+          _taskManager.Enqueue(() => SpeakTTS(Plugin.Configuration.TTSWhenEachDoneMsg), "SpeakTTSEach");
 
         return true;
       }

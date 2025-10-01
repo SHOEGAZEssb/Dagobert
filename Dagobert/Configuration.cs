@@ -39,7 +39,11 @@ public sealed class Configuration : IPluginConfiguration
 
   public bool TTSWhenAllDone { get; set; } = false;
 
+  public string TTSWhenAllDoneMsg { get; set; } = "Finished auto pinching all retainers";
+
   public bool TTSWhenEachDone { get; set; } = false;
+
+  public string TTSWhenEachDoneMsg { get; set; } = "Auto Pinch done";
 
   public int TTSVolume { get; set; } = 20;
 
