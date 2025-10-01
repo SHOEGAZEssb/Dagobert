@@ -218,5 +218,74 @@ public sealed class ConfigWindow : Window
                        "Be aware that the configured key still does every other hotkey action it is configured for.");
       ImGui.EndTooltip();
     }
+
+    if (!Plugin.Configuration.DontUseTTS)
+    {
+      ImGui.Separator();
+      ImGui.Text("Text-To-Speech");
+
+      ImGui.BeginGroup();
+      bool ttsall = Plugin.Configuration.TTSWhenAllDone;
+      if (ImGui.Checkbox("All", ref ttsall))
+      {
+        Plugin.Configuration.TTSWhenAllDone = ttsall;
+        Plugin.Configuration.Save();
+      }
+      ImGui.SameLine();
+      string ttsallmsg = Plugin.Configuration.TTSWhenAllDoneMsg;
+      if (ImGui.InputText("##ttsallmsg", ref ttsallmsg, 256, ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.EnterReturnsTrue))
+      {
+        Plugin.Configuration.TTSWhenAllDoneMsg = ttsallmsg;
+        Plugin.Configuration.Save();
+      }
+      ImGui.EndGroup();
+      if (ImGui.IsItemHovered())
+      {
+        ImGui.BeginTooltip();
+        ImGui.SetTooltip("If checked, will use Windows TTS to say the configured phrase once Auto Pinch has processed all retainers");
+        ImGui.EndTooltip();
+      }
+      
+      ImGui.BeginGroup();
+      bool ttseach = Plugin.Configuration.TTSWhenEachDone;
+      if (ImGui.Checkbox("Each", ref ttseach))
+      {
+        Plugin.Configuration.TTSWhenEachDone = ttseach;
+        Plugin.Configuration.Save();
+      }
+      ImGui.SameLine();
+      string ttseachmsg = Plugin.Configuration.TTSWhenEachDoneMsg;
+      if (ImGui.InputText("##ttseachmsg", ref ttseachmsg, 256, ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.EnterReturnsTrue))
+      {
+        Plugin.Configuration.TTSWhenEachDoneMsg = ttseachmsg;
+        Plugin.Configuration.Save();
+      }
+      ImGui.EndGroup();
+      if (ImGui.IsItemHovered())
+      {
+        ImGui.BeginTooltip();
+        ImGui.SetTooltip("If checked, will use Windows TTS to say the configured phrase once Auto Pinch has processed the current retainer's listings");
+        ImGui.EndTooltip();
+      }
+
+      ImGui.BeginGroup();
+      ImGui.Text("TTS Volume:");
+      ImGui.SameLine();
+      int volume = Plugin.Configuration.TTSVolume;
+      if (ImGui.SliderInt("##ttsVolumeAmount", ref volume, 1, 99))
+      {
+        Plugin.Configuration.TTSVolume = volume;
+        Plugin.Configuration.Save();
+      }
+      ImGui.SameLine();
+      ImGui.Text("%");
+      ImGui.EndGroup();
+      if (ImGui.IsItemHovered())
+      {
+        ImGui.BeginTooltip();
+        ImGui.SetTooltip("Sets the volume of the Text-to-speech message");
+        ImGui.EndTooltip();
+      }
+    }
   }
 }

@@ -37,6 +37,18 @@ public sealed class Configuration : IPluginConfiguration
 
   public bool UndercutSelf { get; set; } = false;
 
+  public bool TTSWhenAllDone { get; set; } = false;
+
+  public string TTSWhenAllDoneMsg { get; set; } = "Finished auto pinching all retainers";
+
+  public bool TTSWhenEachDone { get; set; } = false;
+
+  public string TTSWhenEachDoneMsg { get; set; } = "Auto Pinch done";
+
+  public int TTSVolume { get; set; } = 20;
+
+  public bool DontUseTTS { get; set; } = false;
+
   public void Save()
   {
     Plugin.PluginInterface.SavePluginConfig(this);
