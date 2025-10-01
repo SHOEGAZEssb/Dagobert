@@ -37,6 +37,14 @@ public sealed class Configuration : IPluginConfiguration
 
   public bool UndercutSelf { get; set; } = false;
 
+  public bool TTSWhenAllDone { get; set; } = false;
+
+  public bool TTSWhenEachDone { get; set; } = false;
+
+  public int TTSVolume { get; set; } = 20;
+
+  public bool DontUseTTS { get; set; } = false;
+
   public void Save()
   {
     Plugin.PluginInterface.SavePluginConfig(this);

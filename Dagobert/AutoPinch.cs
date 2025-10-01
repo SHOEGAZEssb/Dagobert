@@ -17,6 +17,7 @@ using Dalamud.Bindings.ImGui;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Speech.Synthesis;
 using static ECommons.UIHelpers.AtkReaderImplementations.ReaderContextMenu;
 
 namespace Dagobert
@@ -51,6 +52,19 @@ namespace Dagobert
         TimeLimitMS = 10000,
         AbortOnTimeout = true
       };
+      // Fails on non-windows
+      try
+      {
+        var tts = new SpeechSynthesizer();
+        tts.SelectVoice(tts.Voice.Name);
+        Plugin.Configuration.DontUseTTS = false;
+        Plugin.Configuration.Save();
+      }
+      catch
+      {
+        Plugin.Configuration.DontUseTTS = true;
+        Plugin.Configuration.Save();
+      }
 
       Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, RetainerSellPostSetup);
     }
@@ -204,6 +218,8 @@ namespace Dagobert
         }
 
         _taskManager.Enqueue(RemoveTalkAddonListeners);
+        if (Plugin.Configuration.TTSWhenAllDone)
+          _taskManager.Enqueue(() => SpeakTTS("Finished auto pinching all retainers"), $"SpeakTTSAll");
       }
     }
 
@@ -295,6 +311,8 @@ namespace Dagobert
             enqueueFunc(i);
           }
         }
+        if (Plugin.Configuration.TTSWhenEachDone)
+          _taskManager.Enqueue(() => SpeakTTS("Auto Pinch done"), $"SpeakTTSEach");
 
         return true;
       }
@@ -528,6 +546,24 @@ namespace Dagobert
       }
 
       return scale;
+    }
+
+    private static bool? SpeakTTS(string msg)
+    {
+      if (!Plugin.Configuration.DontUseTTS)
+      {
+        SpeechSynthesizer tts = new()
+        {
+            Volume = Plugin.Configuration.TTSVolume
+        };
+        tts.SpeakAsync(msg);
+        tts.SpeakCompleted += (o, e) =>
+        {
+            tts.Dispose();
+            Svc.Log.Verbose($"Finished message: {msg} - tts disposed");
+        };
+      }
+      return true;
     }
 
     private void ClearState()
