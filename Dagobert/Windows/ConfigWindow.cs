@@ -81,6 +81,25 @@ public sealed class ConfigWindow : Window
       ImGui.SetTooltip("Sets the amount by which to undercut");
       ImGui.EndTooltip();
     }
+    
+    ImGui.BeginGroup();
+    ImGui.Text("Max Undercut percentage:");
+    ImGui.SameLine();
+    float maxUndercut = Plugin.Configuration.MaxUndercutPercentage;
+    if (ImGui.SliderFloat("##maximumUndercutAmountPercentage", ref maxUndercut, 0.1f, 99.9f))
+    {
+      Plugin.Configuration.MaxUndercutPercentage = maxUndercut;
+      Plugin.Configuration.Save();
+    }
+    ImGui.SameLine();
+    ImGui.Text($"%%");
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Sets the max amount of percentage allowed to be undercut");
+      ImGui.EndTooltip();
+    }
 
     var undercutSelf = Plugin.Configuration.UndercutSelf;
     if (ImGui.Checkbox("Undercut Self", ref undercutSelf))

@@ -34,6 +34,8 @@ public sealed class Configuration : IPluginConfiguration
   public UndercutMode UndercutMode { get; set; } = UndercutMode.FixedAmount;
 
   public int UndercutAmount { get; set; } = 1;
+  
+  public float MaxUndercutPercentage { get; set; } = 1.0f;
 
   public bool UndercutSelf { get; set; } = false;
 

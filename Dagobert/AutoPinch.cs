@@ -25,6 +25,7 @@ namespace Dagobert
   internal sealed class AutoPinch : Window, IDisposable
   {
     private readonly MarketBoardHandler _mbHandler;
+    private int? _oldPrice;
     private int? _newPrice;
     private bool _skipCurrentItem = false;
     private readonly TaskManager _taskManager;
@@ -455,14 +456,32 @@ namespace Dagobert
         {
           var ui = &retainerSell->AtkUnitBase;
           var itemName = retainerSell->ItemName->NodeText.ToString();
+          _oldPrice = retainerSell->AskingPrice->Value;
           if (_newPrice.HasValue && _newPrice > 0)
-          {
-            Svc.Log.Debug($"Setting new price");
-            _cachedPrices.TryAdd(itemName, _newPrice);
+          { 
+            var cutPercentage = ((float)_newPrice.Value - _oldPrice.Value) / _oldPrice.Value * 100f;
+            if (cutPercentage >= -Plugin.Configuration.MaxUndercutPercentage)
+            {
+              Svc.Log.Debug($"Setting new price");
+              _cachedPrices.TryAdd(itemName, _newPrice);
 
-            retainerSell->AskingPrice->SetValue(_newPrice.Value);
+              retainerSell->AskingPrice->SetValue(_newPrice.Value);
+
+              if (_oldPrice.Value != _newPrice.Value)
+              {
+                var dec = _oldPrice.Value > _newPrice.Value ? "cut" : "increase";
+                Svc.Chat.Print($"{itemName}: Setting new price from {_oldPrice.Value} to {_newPrice.Value}, a {dec} of {MathF.Abs(MathF.Round(cutPercentage, 2))}%");
+              }
+            }
+            else if (Plugin.Configuration.ShowErrorsInChat)
+            {
+              Svc.Chat.PrintError(
+                $"{itemName}: Item ignored because it would cut the price by more than {Plugin.Configuration.MaxUndercutPercentage}%");
+            }
+
             ECommons.Automation.Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
             ui->Close(true);
+            
             return true;
           }
           else
@@ -480,6 +499,7 @@ namespace Dagobert
       }
       finally
       {
+        _oldPrice = null;
         _newPrice = null;
         _skipCurrentItem = false;
       }
