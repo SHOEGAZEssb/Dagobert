@@ -41,52 +41,57 @@ public static class Communicator
     {
         // Parse as SeString
         var seString = SeString.Parse(Encoding.UTF8.GetBytes(itemName));
-
+        
         // Find all text payloads
         var textPayloads = seString.Payloads
             .OfType<TextPayload>()
             .ToList();
         
+        if (textPayloads.Count == 0)
+            return null;
+        
         var cleanedName = "";
         var isHq = false;
         
-        // The actual item name is in the second TextPayload 
-        if (textPayloads.Count >= 2)
+        if (textPayloads.Count == 1)
         {
-            var itemNamePayload = textPayloads[1].Text;
+            // Single text payload - just trim it
+            cleanedName = textPayloads[0].Text?.Trim();
+        }
+        else if (textPayloads.Count >= 2)
+        {
+            // Skip the first payload (it's always just "%" with ETX)
+            // Concatenate payloads starting from index 1
+            var nameParts = new StringBuilder();
             
-            // Remove the prefix: & (U+0026) followed by ETX (U+0003)
-            if (itemNamePayload != null &&
-                itemNamePayload.Length >= 2 && 
-                itemNamePayload[0] == '\u0026' && 
-                itemNamePayload[1] == '\u0003')
+            for (int i = 1; i < textPayloads.Count; i++)
             {
-                cleanedName = itemNamePayload.Substring(2);
-            }
-            else
-            {
-                cleanedName = itemNamePayload;
+                var text = textPayloads[i].Text;
+                
+                // First payload after the "%" marker has the & + ETX prefix
+                if (i == 1 && text?.Length >= 2 && 
+                    text[0] == '\u0026' && text[1] == '\u0003')
+                {
+                    text = text.Substring(2);
+                }
+                
+                nameParts.Append(text);
             }
             
-            // Check for HQ symbol at the end: space + U+E03C
-            if (cleanedName != null &&
-                cleanedName.Length >= 2 && 
-                cleanedName[^1] == '\uE03C')
+            cleanedName = nameParts.ToString();
+            
+            // Check and clean HQ symbol at the very end
+            if (cleanedName.Length >= 1 && cleanedName[^1] == '\uE03C')
             {
                 isHq = true;
-                // Remove the HQ symbol and the space before it
-                cleanedName = cleanedName.Substring(0, cleanedName.Length - 2).TrimEnd();
+                cleanedName = cleanedName.Substring(0, cleanedName.Length - 1).TrimEnd();
             }
             else
             {
-                cleanedName = cleanedName?.TrimEnd();
+                cleanedName = cleanedName.TrimEnd();
             }
         }
-        else if (textPayloads.Count == 1)
-        {
-            cleanedName = textPayloads[0].Text!.Trim();
-        }
-        
+
         // Search for the item
         var item = ItemSheet.FirstOrDefault(i => 
             i.Name.ToString().Equals(cleanedName, StringComparison.OrdinalIgnoreCase));
