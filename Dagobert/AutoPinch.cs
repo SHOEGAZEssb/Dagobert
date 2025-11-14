@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Speech.Synthesis;
+using Dalamud.Game.Text.SeStringHandling;
 using static ECommons.UIHelpers.AtkReaderImplementations.ReaderContextMenu;
 
 namespace Dagobert
@@ -242,6 +243,7 @@ namespace Dagobert
     {
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
+        Communicator.PrintRetainerName(new AddonMaster.RetainerList(addon).Retainers[index].Name);
         ECommons.Automation.Callback.Fire(addon, true, 2, index);
         return true;
       }
@@ -464,20 +466,11 @@ namespace Dagobert
             {
               Svc.Log.Debug($"Setting new price");
               _cachedPrices.TryAdd(itemName, _newPrice);
-
               retainerSell->AskingPrice->SetValue(_newPrice.Value);
-
-              if (_oldPrice.Value != _newPrice.Value)
-              {
-                var dec = _oldPrice.Value > _newPrice.Value ? "cut" : "increase";
-                Svc.Chat.Print($"{itemName}: Setting new price from {_oldPrice.Value} to {_newPrice.Value}, a {dec} of {MathF.Abs(MathF.Round(cutPercentage, 2))}%");
-              }
+              Communicator.PrintPriceUpdate(itemName, _oldPrice.Value, _newPrice.Value, cutPercentage);
             }
-            else if (Plugin.Configuration.ShowErrorsInChat)
-            {
-              Svc.Chat.PrintError(
-                $"{itemName}: Item ignored because it would cut the price by more than {Plugin.Configuration.MaxUndercutPercentage}%");
-            }
+            else
+              Communicator.PrintAboveMaxCutError(itemName);
 
             ECommons.Automation.Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
             ui->Close(true);
@@ -487,8 +480,7 @@ namespace Dagobert
           else
           {
             Svc.Log.Warning("SetNewPrice: No price to set");
-            if (Plugin.Configuration.ShowErrorsInChat)
-              Svc.Chat.PrintError($"{itemName}: No price to set, please set price manually");
+            Communicator.PrintNoPriceToSetError(itemName);
             ECommons.Automation.Callback.Fire(&retainerSell->AtkUnitBase, true, 1); // cancel
             ui->Close(true);
             return true;
