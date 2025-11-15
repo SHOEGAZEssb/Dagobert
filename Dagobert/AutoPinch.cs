@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Speech.Synthesis;
+using Dalamud.Game.Text.SeStringHandling;
 using static ECommons.UIHelpers.AtkReaderImplementations.ReaderContextMenu;
 
 namespace Dagobert
@@ -25,6 +26,7 @@ namespace Dagobert
   internal sealed class AutoPinch : Window, IDisposable
   {
     private readonly MarketBoardHandler _mbHandler;
+    private int? _oldPrice;
     private int? _newPrice;
     private bool _skipCurrentItem = false;
     private readonly TaskManager _taskManager;
@@ -241,6 +243,7 @@ namespace Dagobert
     {
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
+        Communicator.PrintRetainerName(new AddonMaster.RetainerList(addon).Retainers[index].Name);
         ECommons.Automation.Callback.Fire(addon, true, 2, index);
         return true;
       }
@@ -455,21 +458,29 @@ namespace Dagobert
         {
           var ui = &retainerSell->AtkUnitBase;
           var itemName = retainerSell->ItemName->NodeText.ToString();
+          _oldPrice = retainerSell->AskingPrice->Value;
           if (_newPrice.HasValue && _newPrice > 0)
-          {
-            Svc.Log.Debug($"Setting new price");
-            _cachedPrices.TryAdd(itemName, _newPrice);
+          { 
+            var cutPercentage = ((float)_newPrice.Value - _oldPrice.Value) / _oldPrice.Value * 100f;
+            if (cutPercentage >= -Plugin.Configuration.MaxUndercutPercentage)
+            {
+              Svc.Log.Debug($"Setting new price");
+              _cachedPrices.TryAdd(itemName, _newPrice);
+              retainerSell->AskingPrice->SetValue(_newPrice.Value);
+              Communicator.PrintPriceUpdate(itemName, _oldPrice.Value, _newPrice.Value, cutPercentage);
+            }
+            else
+              Communicator.PrintAboveMaxCutError(itemName);
 
-            retainerSell->AskingPrice->SetValue(_newPrice.Value);
             ECommons.Automation.Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
             ui->Close(true);
+            
             return true;
           }
           else
           {
             Svc.Log.Warning("SetNewPrice: No price to set");
-            if (Plugin.Configuration.ShowErrorsInChat)
-              Svc.Chat.PrintError($"{itemName}: No price to set, please set price manually");
+            Communicator.PrintNoPriceToSetError(itemName);
             ECommons.Automation.Callback.Fire(&retainerSell->AtkUnitBase, true, 1); // cancel
             ui->Close(true);
             return true;
@@ -480,6 +491,7 @@ namespace Dagobert
       }
       finally
       {
+        _oldPrice = null;
         _newPrice = null;
         _skipCurrentItem = false;
       }
