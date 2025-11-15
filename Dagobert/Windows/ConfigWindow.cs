@@ -164,6 +164,36 @@ public sealed class ConfigWindow : Window
       ImGui.SetTooltip("If enabled shows pinching errors in the chat.");
       ImGui.EndTooltip();
     }
+    
+    bool adjustmentsMessages = Plugin.Configuration.ShowPriceAdjustmentsMessages;
+    if (ImGui.Checkbox("Show Price Adjustments", ref adjustmentsMessages))
+    {
+      Plugin.Configuration.ShowPriceAdjustmentsMessages = adjustmentsMessages;
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("If enabled shows detailed price adjustments messages in the chat.");
+      ImGui.EndTooltip();
+    }
+
+    ImGui.SameLine(0, 40);
+    
+    bool retainerNames = Plugin.Configuration.ShowRetainerNames
+      ;
+    if (ImGui.Checkbox("Show Retainer Names", ref retainerNames))
+    {
+      Plugin.Configuration.ShowRetainerNames = retainerNames;
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("If enabled, when pinching all retainers, the name of the retainer will be printed in the chat.");
+      ImGui.EndTooltip();
+    }
+    
 
     ImGui.Separator();
 

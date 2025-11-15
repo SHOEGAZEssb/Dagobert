@@ -15,6 +15,8 @@ public static class Communicator
     
     public static void PrintPriceUpdate(string itemName, int? oldPrice, int? newPrice, float cutPercentage)
     {
+        if(!Plugin.Configuration.ShowPriceAdjustmentsMessages)
+            return;
         
         if(oldPrice == null || newPrice == null) return;
         if (oldPrice.Value == newPrice.Value) return;
@@ -68,9 +70,8 @@ public static class Communicator
             {
                 var text = textPayloads[i].Text;
                 
-                // First payload after the "%" marker has the & + ETX prefix
-                if (i == 1 && text?.Length >= 2 && 
-                    text[0] == '\u0026' && text[1] == '\u0003')
+                // First payload after the initial marker has a prefix: ANY_CHAR + ETX (U+0003)
+                if (i == 1 && text?.Length >= 2 && text[1] == '\u0003')
                 {
                     text = text.Substring(2);
                 }
@@ -107,28 +108,30 @@ public static class Communicator
     
     public static void PrintAboveMaxCutError(string itemName)
     {
-        if (Plugin.Configuration.ShowErrorsInChat)
-        {
-            var itemPayload = RawItemNameToItemPayload(itemName);
+        if (!Plugin.Configuration.ShowErrorsInChat) return;
+        
+        var itemPayload = RawItemNameToItemPayload(itemName);
             
-            if (itemPayload != null)
-            {
-                var seString = new SeStringBuilder()
-                    .AddItemLink(itemPayload.ItemId, itemPayload.IsHQ)
-                    .AddText($": Item ignored because it would cut the price by more than {Plugin.Configuration.MaxUndercutPercentage}%")
-                    .Build();
+        if (itemPayload != null)
+        {
+            var seString = new SeStringBuilder()
+                .AddItemLink(itemPayload.ItemId, itemPayload.IsHQ)
+                .AddText($": Item ignored because it would cut the price by more than {Plugin.Configuration.MaxUndercutPercentage}%")
+                .Build();
     
-                Svc.Chat.PrintError(seString);
-            }
-            else
-            {
-                Svc.Chat.PrintError($"{itemName}: Item ignored because it would cut the price by more than {Plugin.Configuration.MaxUndercutPercentage}%");
-            }
+            Svc.Chat.PrintError(seString);
+        }
+        else
+        {
+            Svc.Chat.PrintError($"{itemName}: Item ignored because it would cut the price by more than {Plugin.Configuration.MaxUndercutPercentage}%");
         }
     }
 
     public static void PrintRetainerName(string name)
     {
+        if (!Plugin.Configuration.ShowRetainerNames)
+            return;
+        
         var seString = new SeStringBuilder()
             .AddText("Now Pinching items of retainer: ")
             .AddUiForeground(name, 561)
