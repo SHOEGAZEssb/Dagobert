@@ -216,6 +216,12 @@ namespace Dagobert
         var num = new AddonMaster.RetainerList(addon).Retainers.Length;
         for (int i = 0; i < num; i++)
         {
+          // Skip retainers that are excluded in configuration
+          if (i < Plugin.Configuration.EnabledRetainers.Length && !Plugin.Configuration.EnabledRetainers[i])
+          {
+            Svc.Log.Debug($"Skipping retainer {i + 1} (excluded by user configuration)");
+            continue;
+          }
           EnqueueSingleRetainer(i);
         }
 

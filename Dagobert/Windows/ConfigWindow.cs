@@ -197,6 +197,33 @@ public sealed class ConfigWindow : Window
 
     ImGui.Separator();
 
+    ImGui.Text("Retainer Selection");
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Select which retainers should be included in auto pinch.\r\n" +
+                       "Unchecked retainers will be skipped when using 'Auto Pinch' on all retainers.");
+      ImGui.EndTooltip();
+    }
+
+    // Display checkboxes in a grid layout (2 columns)
+    for (int i = 0; i < 10; i++)
+    {
+      bool enabled = Plugin.Configuration.EnabledRetainers[i];
+      string label = $"Retainer {i + 1}##retainer{i}";
+      if (ImGui.Checkbox(label, ref enabled))
+      {
+        Plugin.Configuration.EnabledRetainers[i] = enabled;
+        Plugin.Configuration.Save();
+      }
+      
+      // Place next checkbox on same line if it's an odd index (0, 2, 4, 6, 8)
+      if (i % 2 == 0 && i < 9)
+        ImGui.SameLine(0, 100);
+    }
+
+    ImGui.Separator();
+
     bool enablePostPinchKey = Plugin.Configuration.EnablePostPinchkey;
     if (ImGui.Checkbox("Enable Post Pinch Hotkey", ref enablePostPinchKey))
     {

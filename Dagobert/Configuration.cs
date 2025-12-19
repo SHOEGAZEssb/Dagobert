@@ -55,6 +55,13 @@ public sealed class Configuration : IPluginConfiguration
 
   public bool DontUseTTS { get; set; } = false;
 
+  /// <summary>
+  /// Array of 10 booleans indicating which retainers are enabled for auto pinch.
+  /// Index corresponds to retainer position (0-9).
+  /// true = enabled, false = excluded
+  /// </summary>
+  public bool[] EnabledRetainers { get; set; } = new bool[10] { true, true, true, true, true, true, true, true, true, true };
+
   public void Save()
   {
     Plugin.PluginInterface.SavePluginConfig(this);
