@@ -34,13 +34,13 @@ public sealed class Configuration : IPluginConfiguration
   public UndercutMode UndercutMode { get; set; } = UndercutMode.FixedAmount;
 
   public int UndercutAmount { get; set; } = 1;
-  
+
   public float MaxUndercutPercentage { get; set; } = 100.0f;
 
   public bool UndercutSelf { get; set; } = false;
-  
+
   public bool ShowPriceAdjustmentsMessages { get; set; } = true;
-  
+
   public bool ShowRetainerNames { get; set; } = true;
 
   public bool TTSWhenAllDone { get; set; } = false;

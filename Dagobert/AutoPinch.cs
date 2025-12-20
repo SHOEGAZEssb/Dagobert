@@ -460,7 +460,7 @@ namespace Dagobert
           var itemName = retainerSell->ItemName->NodeText.ToString();
           _oldPrice = retainerSell->AskingPrice->Value;
           if (_newPrice.HasValue && _newPrice > 0)
-          { 
+          {
             var cutPercentage = ((float)_newPrice.Value - _oldPrice.Value) / _oldPrice.Value * 100f;
             if (cutPercentage >= -Plugin.Configuration.MaxUndercutPercentage)
             {
@@ -474,7 +474,7 @@ namespace Dagobert
 
             ECommons.Automation.Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
             ui->Close(true);
-            
+
             return true;
           }
           else
@@ -566,13 +566,13 @@ namespace Dagobert
       {
         SpeechSynthesizer tts = new()
         {
-            Volume = Plugin.Configuration.TTSVolume
+          Volume = Plugin.Configuration.TTSVolume
         };
         tts.SpeakAsync(msg);
         tts.SpeakCompleted += (o, e) =>
         {
-            tts.Dispose();
-            Svc.Log.Verbose($"Finished message: {msg} - tts disposed");
+          tts.Dispose();
+          Svc.Log.Verbose($"Finished message: {msg} - tts disposed");
         };
       }
       return true;
