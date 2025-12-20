@@ -1,7 +1,12 @@
 ﻿using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
+using ECommons.UIHelpers.AddonMasterImplementations;
+using static ECommons.GenericHelpers;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Dagobert.Windows;
 
@@ -202,24 +207,116 @@ public sealed class ConfigWindow : Window
     {
       ImGui.BeginTooltip();
       ImGui.SetTooltip("Select which retainers should be included in auto pinch.\r\n" +
-                       "Unchecked retainers will be skipped when using 'Auto Pinch' on all retainers.");
+                       "Unchecked retainers will be skipped when using 'Auto Pinch' on all retainers.\r\n" +
+                       "Note: Open the retainer list in-game to see and configure your retainers.");
       ImGui.EndTooltip();
     }
 
-    // Display checkboxes in a grid layout (2 columns)
-    for (int i = 0; i < 10; i++)
+    // Try to fetch retainer names from the RetainerList addon if available
+    unsafe
     {
-      bool enabled = Plugin.Configuration.EnabledRetainers[i];
-      string label = $"Retainer {i + 1}##retainer{i}";
-      if (ImGui.Checkbox(label, ref enabled))
-      {
-        Plugin.Configuration.EnabledRetainers[i] = enabled;
-        Plugin.Configuration.Save();
-      }
+      string[] retainerNameArray = null;
+      bool namesUpdated = false;
       
-      // Place next checkbox on same line if it's an odd index (0, 2, 4, 6, 8)
-      if (i % 2 == 0 && i < 9)
-        ImGui.SameLine(0, 100);
+      if (TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && IsAddonReady(addon))
+      {
+        try
+        {
+          var retainerList = new AddonMaster.RetainerList(addon);
+          retainerNameArray = retainerList.Retainers.Select(r => r.Name).ToArray();
+          
+          // Update stored retainer names if they changed
+          var currentNames = new HashSet<string>(retainerNameArray);
+          var storedNames = new HashSet<string>(Plugin.Configuration.LastKnownRetainerNames);
+          
+          if (!currentNames.SetEquals(storedNames))
+          {
+            // Names changed - update the stored list
+            Plugin.Configuration.LastKnownRetainerNames = retainerNameArray.ToList();
+            
+            // Remove enabled status for retainers that no longer exist
+            Plugin.Configuration.EnabledRetainerNames.RemoveWhere(name => !currentNames.Contains(name) && name != Configuration.ALL_DISABLED_SENTINEL);
+            
+            Plugin.Configuration.Save();
+            namesUpdated = true;
+          }
+        }
+        catch
+        {
+          // Fallback if we can't read retainer names
+        }
+      }
+
+      // Use fetched names if available, otherwise use stored names
+      var namesToDisplay = retainerNameArray ?? Plugin.Configuration.LastKnownRetainerNames.ToArray();
+
+      // Only display checkboxes if we have retainer names (either fetched or stored)
+      if (namesToDisplay.Length > 0)
+      {
+        for (int i = 0; i < namesToDisplay.Length; i++)
+        {
+          string retainerName = namesToDisplay[i];
+          
+          // Empty set = all enabled, sentinel = all disabled, non-empty = explicit whitelist
+          bool allDisabled = Plugin.Configuration.EnabledRetainerNames.Contains(Configuration.ALL_DISABLED_SENTINEL);
+          bool enabled = allDisabled ? false : 
+                        (Plugin.Configuration.EnabledRetainerNames.Count == 0 ? true : 
+                         Plugin.Configuration.EnabledRetainerNames.Contains(retainerName));
+          
+          string label = $"{retainerName}##retainer{i}";
+          if (ImGui.Checkbox(label, ref enabled))
+          {
+            Plugin.Configuration.EnabledRetainerNames.Remove(Configuration.ALL_DISABLED_SENTINEL);
+            
+            if (enabled)
+            {
+              Plugin.Configuration.EnabledRetainerNames.Add(retainerName);
+              // Optimize: if all retainers are enabled, clear set to use default "all enabled" mode
+              if (Plugin.Configuration.EnabledRetainerNames.Count == namesToDisplay.Length)
+              {
+                Plugin.Configuration.EnabledRetainerNames.Clear();
+              }
+            }
+            else
+            {
+              // Transition from "all enabled" (empty set) to explicit whitelist
+              if (Plugin.Configuration.EnabledRetainerNames.Count == 0)
+              {
+                foreach (string name in namesToDisplay)
+                {
+                  if (name != retainerName)
+                  {
+                    Plugin.Configuration.EnabledRetainerNames.Add(name);
+                  }
+                }
+              }
+              else
+              {
+                Plugin.Configuration.EnabledRetainerNames.Remove(retainerName);
+                // Use sentinel to mark "all disabled" state (empty set means "all enabled")
+                if (Plugin.Configuration.EnabledRetainerNames.Count == 0)
+                {
+                  Plugin.Configuration.EnabledRetainerNames.Add(Configuration.ALL_DISABLED_SENTINEL);
+                }
+              }
+            }
+            Plugin.Configuration.Save();
+          }
+          
+          // Place next checkbox on same line if it's an even index (0, 2, 4, 6, 8)
+          if (i % 2 == 0 && i < namesToDisplay.Length - 1)
+            ImGui.SameLine(0, 150);
+        }
+        
+        if (retainerNameArray == null && !namesUpdated)
+        {
+          ImGui.TextColored(new System.Numerics.Vector4(0.7f, 0.7f, 0.7f, 1), "(Using cached retainer list - open retainer list to refresh)");
+        }
+      }
+      else
+      {
+        ImGui.TextColored(new System.Numerics.Vector4(1, 1, 0, 1), "Open retainer list in-game to configure retainer selection");
+      }
     }
 
     ImGui.Separator();

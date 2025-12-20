@@ -1,6 +1,7 @@
 ﻿using Dalamud.Configuration;
 using Dalamud.Game.ClientState.Keys;
 using System;
+using System.Collections.Generic;
 
 namespace Dagobert;
 
@@ -56,11 +57,19 @@ public sealed class Configuration : IPluginConfiguration
   public bool DontUseTTS { get; set; } = false;
 
   /// <summary>
-  /// Array of 10 booleans indicating which retainers are enabled for auto pinch.
-  /// Index corresponds to retainer position (0-9).
-  /// true = enabled, false = excluded
+  /// Set of retainer names that are enabled for auto pinch.
+  /// If empty or null, all retainers are enabled by default.
+  /// If contains ALL_DISABLED_SENTINEL, all retainers are disabled.
   /// </summary>
-  public bool[] EnabledRetainers { get; set; } = new bool[10] { true, true, true, true, true, true, true, true, true, true };
+  public const string ALL_DISABLED_SENTINEL = "__ALL_DISABLED__";
+  
+  public HashSet<string> EnabledRetainerNames { get; set; } = new HashSet<string>();
+
+  /// <summary>
+  /// List of retainer names that were last fetched from the game.
+  /// Used to display retainer selection even when the retainer list is not open.
+  /// </summary>
+  public List<string> LastKnownRetainerNames { get; set; } = new List<string>();
 
   public void Save()
   {
