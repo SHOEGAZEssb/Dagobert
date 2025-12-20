@@ -213,9 +213,33 @@ namespace Dagobert
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "Talk", SkipRetainerDialog);
 
         // we cache the number of retainers because AddonMaster will be disposed once the RetainerList addon is closed.
-        var num = new AddonMaster.RetainerList(addon).Retainers.Length;
+        var retainerList = new AddonMaster.RetainerList(addon);
+        var retainers = retainerList.Retainers;
+        var num = retainers.Length;
+        
+        // Check if all are disabled (sentinel present)
+        bool allDisabled = Plugin.Configuration.EnabledRetainerNames.Contains(Configuration.ALL_DISABLED_SENTINEL);
+        
+        // If all are disabled, skip all retainers and notify user
+        if (allDisabled)
+        {
+          Communicator.PrintAllRetainersDisabled();
+          return;
+        }
+        
+        // If no retainers are explicitly enabled, enable all by default
+        bool allEnabled = Plugin.Configuration.EnabledRetainerNames.Count == 0;
+        
         for (int i = 0; i < num; i++)
         {
+          var retainerName = retainers[i].Name;
+          
+          // Skip retainers that are excluded in configuration
+          if (!allEnabled && !Plugin.Configuration.EnabledRetainerNames.Contains(retainerName))
+          {
+            Svc.Log.Debug($"Skipping retainer '{retainerName}' (excluded by user configuration)");
+            continue;
+          }
           EnqueueSingleRetainer(i);
         }
 
