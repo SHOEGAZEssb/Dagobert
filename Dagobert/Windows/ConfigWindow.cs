@@ -86,7 +86,7 @@ public sealed class ConfigWindow : Window
       ImGui.SetTooltip("Sets the amount by which to undercut");
       ImGui.EndTooltip();
     }
-    
+
     ImGui.BeginGroup();
     ImGui.Text("Max Undercut percentage:");
     ImGui.SameLine();
@@ -169,7 +169,7 @@ public sealed class ConfigWindow : Window
       ImGui.SetTooltip("If enabled shows pinching errors in the chat.");
       ImGui.EndTooltip();
     }
-    
+
     bool adjustmentsMessages = Plugin.Configuration.ShowPriceAdjustmentsMessages;
     if (ImGui.Checkbox("Show Price Adjustments", ref adjustmentsMessages))
     {
@@ -184,7 +184,7 @@ public sealed class ConfigWindow : Window
     }
 
     ImGui.SameLine(0, 40);
-    
+
     bool retainerNames = Plugin.Configuration.ShowRetainerNames
       ;
     if (ImGui.Checkbox("Show Retainer Names", ref retainerNames))
@@ -198,7 +198,7 @@ public sealed class ConfigWindow : Window
       ImGui.SetTooltip("If enabled, when pinching all retainers, the name of the retainer will be printed in the chat.");
       ImGui.EndTooltip();
     }
-    
+
 
     ImGui.Separator();
 
@@ -418,7 +418,7 @@ public sealed class ConfigWindow : Window
         ImGui.SetTooltip("If checked, will use Windows TTS to say the configured phrase once Auto Pinch has processed all retainers");
         ImGui.EndTooltip();
       }
-      
+
       ImGui.BeginGroup();
       bool ttseach = Plugin.Configuration.TTSWhenEachDone;
       if (ImGui.Checkbox("Each", ref ttseach))
