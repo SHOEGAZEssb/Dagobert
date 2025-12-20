@@ -63,13 +63,13 @@ public sealed class Configuration : IPluginConfiguration
   /// </summary>
   public const string ALL_DISABLED_SENTINEL = "__ALL_DISABLED__";
   
-  public HashSet<string> EnabledRetainerNames { get; set; } = new HashSet<string>();
+  public HashSet<string> EnabledRetainerNames { get; set; } = [];
 
   /// <summary>
   /// List of retainer names that were last fetched from the game.
   /// Used to display retainer selection even when the retainer list is not open.
   /// </summary>
-  public List<string> LastKnownRetainerNames { get; set; } = new List<string>();
+  public List<string> LastKnownRetainerNames { get; set; } = [];
 
   public void Save()
   {

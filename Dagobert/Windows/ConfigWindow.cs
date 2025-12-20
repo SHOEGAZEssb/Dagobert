@@ -215,7 +215,7 @@ public sealed class ConfigWindow : Window
     // Try to fetch retainer names from the RetainerList addon if available
     unsafe
     {
-      string[] retainerNameArray = null;
+      string[]? retainerNameArray = null;
       bool namesUpdated = false;
       
       if (TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && IsAddonReady(addon))
@@ -223,7 +223,7 @@ public sealed class ConfigWindow : Window
         try
         {
           var retainerList = new AddonMaster.RetainerList(addon);
-          retainerNameArray = retainerList.Retainers.Select(r => r.Name).ToArray();
+          retainerNameArray = [.. retainerList.Retainers.Select(r => r.Name)];
           
           // Update stored retainer names if they changed
           var currentNames = new HashSet<string>(retainerNameArray);
@@ -232,7 +232,7 @@ public sealed class ConfigWindow : Window
           if (!currentNames.SetEquals(storedNames))
           {
             // Names changed - update the stored list
-            Plugin.Configuration.LastKnownRetainerNames = retainerNameArray.ToList();
+            Plugin.Configuration.LastKnownRetainerNames = [.. retainerNameArray];
             
             // Remove enabled status for retainers that no longer exist
             Plugin.Configuration.EnabledRetainerNames.RemoveWhere(name => !currentNames.Contains(name) && name != Configuration.ALL_DISABLED_SENTINEL);
@@ -248,7 +248,7 @@ public sealed class ConfigWindow : Window
       }
 
       // Use fetched names if available, otherwise use stored names
-      var namesToDisplay = retainerNameArray ?? Plugin.Configuration.LastKnownRetainerNames.ToArray();
+      var namesToDisplay = retainerNameArray ?? [.. Plugin.Configuration.LastKnownRetainerNames];
 
       // Only display checkboxes if we have retainer names (either fetched or stored)
       if (namesToDisplay.Length > 0)
@@ -259,9 +259,7 @@ public sealed class ConfigWindow : Window
           
           // Empty set = all enabled, sentinel = all disabled, non-empty = explicit whitelist
           bool allDisabled = Plugin.Configuration.EnabledRetainerNames.Contains(Configuration.ALL_DISABLED_SENTINEL);
-          bool enabled = allDisabled ? false : 
-                        (Plugin.Configuration.EnabledRetainerNames.Count == 0 ? true : 
-                         Plugin.Configuration.EnabledRetainerNames.Contains(retainerName));
+          bool enabled = !allDisabled && (Plugin.Configuration.EnabledRetainerNames.Count == 0 || Plugin.Configuration.EnabledRetainerNames.Contains(retainerName));
           
           string label = $"{retainerName}##retainer{i}";
           if (ImGui.Checkbox(label, ref enabled))
