@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -28,6 +29,10 @@ public sealed class Plugin : IDalamudPlugin
   public Plugin()
   {
     Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+    if (Configuration.SeenRetainers == null)
+    {
+      Configuration.SeenRetainers = new List<ulong>();
+    }
     ConfigWindow = new ConfigWindow();
     WindowSystem.AddWindow(ConfigWindow);
 

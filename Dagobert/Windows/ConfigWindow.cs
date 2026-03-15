@@ -268,6 +268,18 @@ public sealed class ConfigWindow : Window
       ImGui.EndTooltip();
     }
 
+    ImGui.BeginGroup();
+    if (ImGui.Button("Clear retainer Cache"))
+    {
+      Plugin.Configuration.SeenRetainers.Clear();
+    }
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Clears the list of seen retainers from your other characters");
+      ImGui.EndTooltip();
+    }
     if (!Plugin.Configuration.DontUseTTS)
     {
       ImGui.Separator();

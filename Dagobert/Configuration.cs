@@ -1,6 +1,7 @@
 ﻿using Dalamud.Configuration;
 using Dalamud.Game.ClientState.Keys;
 using System;
+using System.Collections.Generic;
 
 namespace Dagobert;
 
@@ -54,6 +55,8 @@ public sealed class Configuration : IPluginConfiguration
   public int TTSVolume { get; set; } = 20;
 
   public bool DontUseTTS { get; set; } = false;
+
+  public List<ulong> SeenRetainers { get; set; } = null!;
 
   public void Save()
   {
