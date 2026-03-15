@@ -115,20 +115,11 @@ namespace Dagobert
         }
         
       }
-
       if (changed)
       {
         Plugin.Configuration.Save();
       }
     }
-    private unsafe bool IsOwnRetainer(ulong retainerId)
-    {
-      foreach (var retainer in Plugin.Configuration.SeenRetainers)
-      {
-        if (retainerId == retainer)
-          return true;
-      }
-      return false;
-    }
+    private bool IsOwnRetainer(ulong retainerId) => Plugin.Configuration.SeenRetainers.Contains(retainerId);
   }
 }
