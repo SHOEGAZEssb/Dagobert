@@ -103,7 +103,7 @@ namespace Dagobert
         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
         {
           if (Plugin.Configuration.EnablePinchKey && Plugin.KeyState[Plugin.Configuration.PinchKey])
-            PinchAllRetainerItems();
+            PinchAllRetainers();
 
           var node = addon->UldManager.NodeList[27];
 
@@ -213,9 +213,33 @@ namespace Dagobert
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "Talk", SkipRetainerDialog);
 
         // we cache the number of retainers because AddonMaster will be disposed once the RetainerList addon is closed.
-        var num = new AddonMaster.RetainerList(addon).Retainers.Length;
+        var retainerList = new AddonMaster.RetainerList(addon);
+        var retainers = retainerList.Retainers;
+        var num = retainers.Length;
+        
+        // Check if all are disabled (sentinel present)
+        bool allDisabled = Plugin.Configuration.EnabledRetainerNames.Contains(Configuration.ALL_DISABLED_SENTINEL);
+        
+        // If all are disabled, skip all retainers and notify user
+        if (allDisabled)
+        {
+          Communicator.PrintAllRetainersDisabled();
+          return;
+        }
+        
+        // If no retainers are explicitly enabled, enable all by default
+        bool allEnabled = Plugin.Configuration.EnabledRetainerNames.Count == 0;
+        
         for (int i = 0; i < num; i++)
         {
+          var retainerName = retainers[i].Name;
+          
+          // Skip retainers that are excluded in configuration
+          if (!allEnabled && !Plugin.Configuration.EnabledRetainerNames.Contains(retainerName))
+          {
+            Svc.Log.Debug($"Skipping retainer '{retainerName}' (excluded by user configuration)");
+            continue;
+          }
           EnqueueSingleRetainer(i);
         }
 
@@ -461,7 +485,7 @@ namespace Dagobert
           var itemName = retainerSell->ItemName->NodeText.ToString();
           _oldPrice = retainerSell->AskingPrice->Value;
           if (_newPrice.HasValue && _newPrice > 0)
-          { 
+          {
             var cutPercentage = ((float)_newPrice.Value - _oldPrice.Value) / _oldPrice.Value * 100f;
             if (cutPercentage >= -Plugin.Configuration.MaxUndercutPercentage)
             {
@@ -475,7 +499,7 @@ namespace Dagobert
 
             ECommons.Automation.Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
             ui->Close(true);
-            
+
             return true;
           }
           else
@@ -567,13 +591,13 @@ namespace Dagobert
       {
         SpeechSynthesizer tts = new()
         {
-            Volume = Plugin.Configuration.TTSVolume
+          Volume = Plugin.Configuration.TTSVolume
         };
         tts.SpeakAsync(msg);
         tts.SpeakCompleted += (o, e) =>
         {
-            tts.Dispose();
-            Svc.Log.Verbose($"Finished message: {msg} - tts disposed");
+          tts.Dispose();
+          Svc.Log.Verbose($"Finished message: {msg} - tts disposed");
         };
       }
       return true;
