@@ -56,7 +56,7 @@ public sealed class Configuration : IPluginConfiguration
 
   public bool DontUseTTS { get; set; } = false;
 
-  public List<ulong> SeenRetainers { get; set; } = new List<ulong>();
+  public List<ulong> SeenRetainers { get; set; } = [];
 
   /// <summary>
   /// Set of retainer names that are enabled for auto pinch.

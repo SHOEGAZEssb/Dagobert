@@ -106,6 +106,7 @@ namespace Dagobert
     {
       bool changed = false;
       var retainerManager = RetainerManager.Instance();
+
       for (uint i = 0; i < retainerManager->GetRetainerCount(); ++i)
       {
         if (!Plugin.Configuration.SeenRetainers.Contains(retainerManager->GetRetainerBySortedIndex(i)->RetainerId))
@@ -115,11 +116,11 @@ namespace Dagobert
         }
         
       }
+
       if (changed)
-      {
         Plugin.Configuration.Save();
-      }
     }
-    private bool IsOwnRetainer(ulong retainerId) => Plugin.Configuration.SeenRetainers.Contains(retainerId);
+
+    private static bool IsOwnRetainer(ulong retainerId) => Plugin.Configuration.SeenRetainers.Contains(retainerId);
   }
 }
