@@ -102,16 +102,24 @@ namespace Dagobert
       _itemHq = nodeText.Contains('\uE03C');
     }
 
-    private unsafe bool IsOwnRetainer(ulong retainerId)
+    public void PopulateRetainerCache()
     {
+      bool changed = false;
       var retainerManager = RetainerManager.Instance();
       for (uint i = 0; i < retainerManager->GetRetainerCount(); ++i)
       {
-        if (retainerId == retainerManager->GetRetainerBySortedIndex(i)->RetainerId)
-          return true;
+        if (!Plugin.Configuration.SeenRetainers.Contains(retainerManager->GetRetainerBySortedIndex(i)->RetainerId))
+        {
+          Plugin.Configuration.SeenRetainers.Add(retainerManager->GetRetainerBySortedIndex(i)->RetainerId);
+          changed = true;
+        }
+        
       }
-
-      return false;
+      if (changed)
+      {
+        Plugin.Configuration.Save();
+      }
     }
+    private bool IsOwnRetainer(ulong retainerId) => Plugin.Configuration.SeenRetainers.Contains(retainerId);
   }
 }

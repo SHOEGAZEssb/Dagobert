@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Dalamud.Game.Command;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.IoC;

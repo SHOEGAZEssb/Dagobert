@@ -205,7 +205,7 @@ namespace Dagobert
     {
       if (_taskManager.IsBusy)
         return;
-
+  
       ClearState();
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
@@ -310,6 +310,7 @@ namespace Dagobert
 
     private unsafe void PinchAllRetainerItems()
     {
+      _mbHandler.PopulateRetainerCache();
       if (_taskManager.IsBusy)
         return;
 
