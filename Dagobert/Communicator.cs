@@ -151,6 +151,25 @@ public static class Communicator
       Svc.Chat.PrintError($"{itemName}: No price to set, please set price manually");
   }
 
+  public static void PrintUsingDefaultAmountWarning(string itemName, int amount)
+  {
+    if (!Plugin.Configuration.ShowErrorsInChat)
+      return;
+
+    var itemPayload = RawItemNameToItemPayload(itemName);
+    if (itemPayload != null)
+    {
+      var seString = new SeStringBuilder()
+          .AddItemLink(itemPayload.ItemId, itemPayload.IsHQ)
+          .AddText($": Using default amount {amount}")
+          .Build();
+
+      Svc.Chat.PrintError(seString);
+    }
+    else
+      Svc.Chat.PrintError($"{itemName}: Using default amount {amount}");
+  }
+
     public static void PrintAllRetainersDisabled()
     {
         var seString = new SeStringBuilder()

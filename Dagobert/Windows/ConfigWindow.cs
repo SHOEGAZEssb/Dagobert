@@ -199,6 +199,25 @@ public sealed class ConfigWindow : Window
       ImGui.EndTooltip();
     }
 
+    int defaultAmount = Plugin.Configuration.DefaultAmount;
+    ImGui.BeginGroup();
+    ImGui.Text("Default amount:");
+    ImGui.SameLine();
+    if (ImGui.InputInt("##defaultAmount", ref defaultAmount))
+    {
+      Plugin.Configuration.DefaultAmount = Math.Clamp(defaultAmount, 0, int.MaxValue);
+      Plugin.Configuration.Save();
+    }
+    ImGui.SameLine();
+    ImGui.Text("Gil");
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Default amount in case of error (0 = disabled)");
+      ImGui.EndTooltip();
+    }
+
 
     ImGui.Separator();
 
