@@ -91,9 +91,9 @@ public sealed class ConfigWindow : Window
     ImGui.Text("Max Undercut percentage:");
     ImGui.SameLine();
     float maxUndercut = Plugin.Configuration.MaxUndercutPercentage;
-    if (ImGui.SliderFloat("##maximumUndercutAmountPercentage", ref maxUndercut, 0.1f, 99.9f, "%.1f"))
+    if (ImGui.InputFloat("##maximumUndercutAmountPercentage", ref maxUndercut, 0.5f, 1.0f, "%.1f"))
     {
-      Plugin.Configuration.MaxUndercutPercentage = MathF.Round(maxUndercut, 1);
+      Plugin.Configuration.MaxUndercutPercentage = Math.Clamp(MathF.Round(maxUndercut, 1), 0.1f, 99.9f);
       Plugin.Configuration.Save();
     }
     ImGui.SameLine();
