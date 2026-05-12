@@ -146,7 +146,7 @@ namespace Dagobert
     private static BaitGuard.Options BuildOptions() => new(
       Enabled: Plugin.Configuration.EnableBaitGuard,
       FloorPercent: Plugin.Configuration.BaitGuardFloorPercent,
-      SampleUnits: Plugin.Configuration.BaitGuardSampleUnits,
+      SampleListings: Plugin.Configuration.BaitGuardSampleListings,
       GapPercent: Plugin.Configuration.BaitGuardGapPercent,
       MinQuantity: Plugin.Configuration.BaitGuardMinQuantity);
 

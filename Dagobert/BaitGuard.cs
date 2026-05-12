@@ -19,7 +19,7 @@ internal static class BaitGuard
   public readonly record struct Options(
     bool Enabled,
     float FloorPercent,
-    int SampleUnits,
+    int SampleListings,
     float GapPercent,
     int MinQuantity);
 
@@ -55,7 +55,8 @@ internal static class BaitGuard
 
     // Filter 1: minimum stack-size threshold. Items normally sold in stacks
     // (materia, gathered mats, food) frequently see 1-unit bait listings; raising
-    // this knob makes the bot ignore them outright.
+    // this knob makes the bot ignore them outright. With listing-level anchoring
+    // (filter 2), MinQuantity is the primary defense against many-decoy attacks.
     var minQty = (uint)Math.Max(1, opts.MinQuantity);
     var passQty = sorted
       .Where(i => listings[i].ItemQuantity >= minQty)
@@ -63,10 +64,13 @@ internal static class BaitGuard
     if (passQty.Count == 0)
       return null;
 
-    // Filter 2: stock-weighted price floor. Use the cheapest N units of supply
-    // to anchor the market, then reject anything priced below FloorPercent of
-    // that anchor. A 99-unit stack contributes 99 votes; a 1-unit decoy contributes 1.
-    uint floor = ComputeStockWeightedFloor(listings, passQty, opts.SampleUnits, opts.FloorPercent);
+    // Filter 2: listing-median price floor. Take the cheapest N listings (each
+    // listing = one stack = one atomic transaction on the market board), use
+    // their median price-per-unit as the anchor, and reject anything below
+    // FloorPercent of the anchor. Each listing counts once regardless of stack
+    // size — buyers can't fractionally split a stack, so a stack is the natural
+    // unit of market-price evidence.
+    uint floor = ComputeListingMedianFloor(listings, passQty, opts.SampleListings, opts.FloorPercent);
     var passFloor = passQty
       .Where(i => listings[i].PricePerUnit >= floor)
       .ToList();
@@ -98,50 +102,26 @@ internal static class BaitGuard
   }
 
   /// <summary>
-  /// Walks cheapest-first until <paramref name="sampleUnits"/> of supply is
-  /// collected, then returns <paramref name="floorPercent"/>% of the weighted-median
-  /// unit price across those units.
+  /// Returns <paramref name="floorPercent"/>% of the median unit-price across
+  /// the cheapest <paramref name="sampleListings"/> entries in
+  /// <paramref name="sortedAsc"/>. If fewer listings exist than the sample size,
+  /// the median is computed over what's available.
   /// </summary>
-  private static uint ComputeStockWeightedFloor(
+  private static uint ComputeListingMedianFloor(
     IReadOnlyList<IMarketBoardItemListing> listings,
     IReadOnlyList<int> sortedAsc,
-    int sampleUnits,
+    int sampleListings,
     float floorPercent)
   {
-    var samples = new List<(uint price, long qty)>();
-    long collected = 0;
-    long cap = Math.Max(1, sampleUnits);
-
-    foreach (var idx in sortedAsc)
-    {
-      var l = listings[idx];
-      long take = Math.Min((long)l.ItemQuantity, cap - collected);
-      if (take <= 0)
-        break;
-
-      samples.Add((l.PricePerUnit, take));
-      collected += take;
-      if (collected >= cap)
-        break;
-    }
-
-    if (collected == 0)
+    int take = Math.Min(sortedAsc.Count, Math.Max(1, sampleListings));
+    if (take == 0)
       return 0;
 
-    // Weighted median: the unit at position collected/2 in the price-sorted supply.
-    long target = collected / 2;
-    long running = 0;
-    uint median = samples[^1].price;
-    foreach (var (price, qty) in samples)
-    {
-      running += qty;
-      if (running > target)
-      {
-        median = price;
-        break;
-      }
-    }
-
+    // sortedAsc is already price-ascending, so the median is the middle entry
+    // (or the lower-mid on even counts). Even-count averaging is unnecessary
+    // here: we're computing a coarse floor, not a precise statistic.
+    int medianIdx = sortedAsc[take / 2];
+    uint median = listings[medianIdx].PricePerUnit;
     return (uint)(median * floorPercent / 100f);
   }
 }

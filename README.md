@@ -9,12 +9,12 @@ This is a personal fork of [SHOEGAZEssb/Dagobert](https://github.com/SHOEGAZEssb
 Three filters apply, in order:
 
 1. **Minimum stack size.** Listings below the configured quantity threshold are ignored (set higher for items normally sold in stacks).
-2. **Stock-weighted price floor.** A weighted median is computed across the cheapest N units of supply. Listings below `FloorPercent` of that median are rejected as bait. A 99-unit stack contributes 99 votes; a 1-unit decoy contributes 1.
+2. **Listing-median price floor.** The bot takes the cheapest N listings and uses their median price-per-unit as the anchor. Anything below `FloorPercent` of that anchor is rejected as bait. Each listing counts once regardless of stack size, because stacks are atomic transactions on the market board (you buy the whole stack or none of it).
 3. **Price-gap detector.** If the cheapest credible listing sits below `GapPercent` of the second-cheapest, it gets skipped and the second is targeted instead.
 
 If no listing passes the filters, the bot holds off rather than committing to bait. All four thresholds are configurable in the "Bait Listing Protection" section of the config window, and the feature can be toggled off entirely to fall back to the legacy "cut to absolute lowest" behavior.
 
-Defaults: 30% floor, 10-unit sample, 50% gap, min-quantity 1.
+Defaults: 30% floor, 5-listing sample, 50% gap, min-quantity 1.
 
 ## Upstream features
 

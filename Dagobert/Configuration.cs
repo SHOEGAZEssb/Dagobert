@@ -44,7 +44,7 @@ public sealed class Configuration : IPluginConfiguration
 
   public float BaitGuardFloorPercent { get; set; } = 30.0f;
 
-  public int BaitGuardSampleUnits { get; set; } = 10;
+  public int BaitGuardSampleListings { get; set; } = 5;
 
   public float BaitGuardGapPercent { get; set; } = 50.0f;
 

@@ -524,21 +524,25 @@ public sealed class ConfigWindow : Window
     }
 
     ImGui.BeginGroup();
-    ImGui.Text("Sample Units:");
+    ImGui.Text("Sample Listings:");
     ImGui.SameLine();
-    int sample = Plugin.Configuration.BaitGuardSampleUnits;
-    if (ImGui.SliderInt("##baitGuardSampleUnits", ref sample, 1, 200))
+    int sample = Plugin.Configuration.BaitGuardSampleListings;
+    if (ImGui.SliderInt("##baitGuardSampleListings", ref sample, 1, 30))
     {
-      Plugin.Configuration.BaitGuardSampleUnits = sample;
+      Plugin.Configuration.BaitGuardSampleListings = sample;
       Plugin.Configuration.Save();
     }
     ImGui.EndGroup();
     if (ImGui.IsItemHovered())
     {
       ImGui.BeginTooltip();
-      ImGui.SetTooltip("How many units of supply to sample when computing the price anchor.\r\n" +
-                       "A 99-unit stack contributes 99 votes; a 1-unit listing contributes 1.\r\n" +
-                       "Default 10. Raise for items normally sold in large stacks.");
+      ImGui.SetTooltip("How many of the cheapest listings to look at when picking the anchor price.\r\n" +
+                       "The bot takes the median price-per-unit across this many listings; anything below\r\n" +
+                       "FloorPercent of that median gets rejected as bait. Each listing counts once regardless\r\n" +
+                       "of its stack size, because stacks are atomic on the market board (you buy the whole\r\n" +
+                       "thing or none of it).\r\n" +
+                       "Default 5. Set higher on items with deep markets (many sellers) if you want a more\r\n" +
+                       "conservative anchor. Lower values make the floor track the cheapest few listings more tightly.");
       ImGui.EndTooltip();
     }
 
