@@ -40,6 +40,16 @@ public sealed class Configuration : IPluginConfiguration
 
   public bool UndercutSelf { get; set; } = false;
 
+  public bool EnableBaitGuard { get; set; } = true;
+
+  public float BaitGuardFloorPercent { get; set; } = 30.0f;
+
+  public int BaitGuardSampleUnits { get; set; } = 10;
+
+  public float BaitGuardGapPercent { get; set; } = 50.0f;
+
+  public int BaitGuardMinQuantity { get; set; } = 1;
+
   public bool ShowPriceAdjustmentsMessages { get; set; } = true;
 
   public bool ShowRetainerNames { get; set; } = true;

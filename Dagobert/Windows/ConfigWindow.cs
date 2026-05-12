@@ -119,6 +119,8 @@ public sealed class ConfigWindow : Window
       ImGui.EndTooltip();
     }
 
+    DrawBaitGuardSection();
+
     ImGui.Separator();
 
     int currentMBDelay = Plugin.Configuration.GetMBPricesDelayMS;
@@ -470,5 +472,115 @@ public sealed class ConfigWindow : Window
         ImGui.EndTooltip();
       }
     }
+  }
+
+  private static void DrawBaitGuardSection()
+  {
+    if (!ImGui.CollapsingHeader("Bait Listing Protection"))
+      return;
+
+    ImGui.Indent();
+
+    var enabled = Plugin.Configuration.EnableBaitGuard;
+    if (ImGui.Checkbox("Enable Bait Guard", ref enabled))
+    {
+      Plugin.Configuration.EnableBaitGuard = enabled;
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("If checked, ignores suspiciously cheap listings (e.g. a 1-unit at 5 gil while real stacks sit at 1.2k)\r\n" +
+                       "and undercuts the cheapest CREDIBLE listing instead.\r\n" +
+                       "Disabling reverts to the legacy behavior of always undercutting the absolute lowest price.");
+      ImGui.EndTooltip();
+    }
+
+    if (!enabled)
+    {
+      ImGui.Unindent();
+      return;
+    }
+
+    ImGui.BeginGroup();
+    ImGui.Text("Floor Percent:");
+    ImGui.SameLine();
+    float floorPct = Plugin.Configuration.BaitGuardFloorPercent;
+    if (ImGui.SliderFloat("##baitGuardFloorPercent", ref floorPct, 1.0f, 99.0f, "%.1f"))
+    {
+      Plugin.Configuration.BaitGuardFloorPercent = MathF.Round(floorPct, 1);
+      Plugin.Configuration.Save();
+    }
+    ImGui.SameLine();
+    ImGui.Text("%");
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("A listing is treated as bait if its unit price is below this percentage of the\r\n" +
+                       "stock-weighted median over the cheapest sampled units.\r\n" +
+                       "Lower = more permissive (fewer rejections). Default 30%.");
+      ImGui.EndTooltip();
+    }
+
+    ImGui.BeginGroup();
+    ImGui.Text("Sample Units:");
+    ImGui.SameLine();
+    int sample = Plugin.Configuration.BaitGuardSampleUnits;
+    if (ImGui.SliderInt("##baitGuardSampleUnits", ref sample, 1, 200))
+    {
+      Plugin.Configuration.BaitGuardSampleUnits = sample;
+      Plugin.Configuration.Save();
+    }
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("How many units of supply to sample when computing the price anchor.\r\n" +
+                       "A 99-unit stack contributes 99 votes; a 1-unit listing contributes 1.\r\n" +
+                       "Default 10. Raise for items normally sold in large stacks.");
+      ImGui.EndTooltip();
+    }
+
+    ImGui.BeginGroup();
+    ImGui.Text("Gap Percent:");
+    ImGui.SameLine();
+    float gapPct = Plugin.Configuration.BaitGuardGapPercent;
+    if (ImGui.SliderFloat("##baitGuardGapPercent", ref gapPct, 1.0f, 99.0f, "%.1f"))
+    {
+      Plugin.Configuration.BaitGuardGapPercent = MathF.Round(gapPct, 1);
+      Plugin.Configuration.Save();
+    }
+    ImGui.SameLine();
+    ImGui.Text("%");
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("If the cheapest credible listing is below this percentage of the second-cheapest,\r\n" +
+                       "skip it and target the second instead. Catches bait that survives the floor filter.\r\n" +
+                       "Default 50%.");
+      ImGui.EndTooltip();
+    }
+
+    ImGui.BeginGroup();
+    ImGui.Text("Min Quantity:");
+    ImGui.SameLine();
+    int minQty = Plugin.Configuration.BaitGuardMinQuantity;
+    if (ImGui.SliderInt("##baitGuardMinQuantity", ref minQty, 1, 99))
+    {
+      Plugin.Configuration.BaitGuardMinQuantity = minQty;
+      Plugin.Configuration.Save();
+    }
+    ImGui.EndGroup();
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Minimum stack size a listing must have to be considered credible.\r\n" +
+                       "1 = no filter. Raise for items normally sold in stacks to ignore 1-unit decoys outright.");
+      ImGui.EndTooltip();
+    }
+
+    ImGui.Unindent();
   }
 }
