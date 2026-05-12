@@ -1,13 +1,15 @@
 {
-  "Author": "SHOEGAZEssb",
-  "Name": "Dagobert",
-  "Punchline": "Penny pinching to the extreme",
-  "Description": "Automates market board penny pinching",
+  "Author": "jkleinne",
+  "Name": "Ascended Dagobert",
+  "Punchline": "Personal fork of Dagobert.",
+  "Description": "Personal fork of Dagobert, the automatic market board undercut plugin. Currently tracks upstream with no fork-specific behavior. If you don't specifically need this fork, install upstream Dagobert instead.",
   "ApplicableVersion": "any",
+  "DalamudApiLevel": 15,
+  "TestingDalamudApiLevel": 15,
   "Tags": [
     "Utility"
   ],
-  "RepoUrl": "https://github.com/SHOEGAZEssb/Dagobert",
+  "RepoUrl": "https://github.com/jkleinne/ascended-dagobert",
   "InternalName": "Dagobert",
   "IconUrl": "",
   "ImageUrls": [
