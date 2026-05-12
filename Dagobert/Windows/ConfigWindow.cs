@@ -492,6 +492,8 @@ public sealed class ConfigWindow : Window
       ImGui.BeginTooltip();
       ImGui.SetTooltip("If checked, ignores suspiciously cheap listings (e.g. a 1-unit at 5 gil while real stacks sit at 1.2k)\r\n" +
                        "and undercuts the cheapest CREDIBLE listing instead.\r\n" +
+                       "On thin markets with only one competitor, the bot holds rather than committing to a\r\n" +
+                       "listing it has no comparison set to verify against.\r\n" +
                        "Disabling reverts to the legacy behavior of always undercutting the absolute lowest price.");
       ImGui.EndTooltip();
     }
@@ -518,8 +520,10 @@ public sealed class ConfigWindow : Window
     {
       ImGui.BeginTooltip();
       ImGui.SetTooltip("A listing is treated as bait if its unit price is below this percentage of the\r\n" +
-                       "stock-weighted median over the cheapest sampled units.\r\n" +
-                       "Lower = more permissive (fewer rejections). Default 30%.");
+                       "median price across the cheapest sampled listings.\r\n" +
+                       "Lower = more permissive (fewer rejections). Default 30%.\r\n" +
+                       "Catches single low-priced bait. Coordinated bait that pulls the median itself down\r\n" +
+                       "(many cheap listings posted together) needs Min Quantity to defend.");
       ImGui.EndTooltip();
     }
 
@@ -581,7 +585,11 @@ public sealed class ConfigWindow : Window
     {
       ImGui.BeginTooltip();
       ImGui.SetTooltip("Minimum stack size a listing must have to be considered credible.\r\n" +
-                       "1 = no filter. Raise for items normally sold in stacks to ignore 1-unit decoys outright.");
+                       "1 = no filter. Raise for items normally sold in stacks to ignore 1-unit decoys outright.\r\n" +
+                       "This is the primary defense against coordinated bait, multiple cheap listings posted\r\n" +
+                       "at once to pull the median floor down. With Min Quantity = 1, that attack defeats the\r\n" +
+                       "floor filter. Setting this above 1 on stack-sold items (mats, food, materia) closes\r\n" +
+                       "that gap.");
       ImGui.EndTooltip();
     }
 
