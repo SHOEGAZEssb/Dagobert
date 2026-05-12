@@ -45,7 +45,7 @@ jobs:
       - name: Generate pluginmaster.json
         shell: pwsh
         run: |
-          $manifest = Get-Content Dagobert/Dagobert.json -Raw | ConvertFrom-Json
+          $manifest = Get-Content Dagobert/ascended-dagobert.json -Raw | ConvertFrom-Json
           $downloadUrl = "https://github.com/jkleinne/ascended-dagobert/releases/download/${{ env.tag }}/latest.zip"
           $entry = [ordered]@{
             Author                  = $manifest.Author
@@ -80,7 +80,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            ./build/Dagobert/latest.zip
+            ./build/ascended-dagobert/latest.zip
             ./pluginmaster.json
           token: ${{ secrets.GITHUB_TOKEN }}
 
