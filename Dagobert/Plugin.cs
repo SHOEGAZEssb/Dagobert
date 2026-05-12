@@ -26,7 +26,7 @@ public sealed class Plugin : IDalamudPlugin
 
   private readonly AutoPinch _autoPinch;
 
-  public readonly WindowSystem WindowSystem = new("Dagobert");
+  public readonly WindowSystem WindowSystem = new("Ascended Dagobert");
   private ConfigWindow ConfigWindow { get; init; }
 
   public Plugin()
@@ -37,7 +37,7 @@ public sealed class Plugin : IDalamudPlugin
 
     CommandManager.AddHandler("/dagobert", new CommandInfo(OnDagobertCommand)
     {
-      HelpMessage = "Opens the Dagobert configuration window"
+      HelpMessage = "Opens the Ascended Dagobert configuration window"
     });
 
     // Register chat link handler for clickable config link

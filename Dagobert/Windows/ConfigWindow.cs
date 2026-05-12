@@ -15,7 +15,7 @@ public sealed class ConfigWindow : Window
   private static readonly string[] _virtualKeyStrings = Enum.GetNames<VirtualKey>();
 
   public ConfigWindow()
-    : base("Dagobert Configuration")
+    : base("Ascended Dagobert Configuration")
   { }
 
   public override void Draw()
