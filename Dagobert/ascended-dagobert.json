@@ -2,7 +2,7 @@
   "Author": "jkleinne",
   "Name": "Ascended Dagobert",
   "Punchline": "Personal fork of Dagobert.",
-  "Description": "Personal fork of Dagobert, the automatic market board undercut plugin. Currently tracks upstream with no fork-specific behavior. If you don't specifically need this fork, install upstream Dagobert instead.",
+  "Description": "Personal fork of Dagobert, the automatic market board undercut plugin. Adds bait listing protection so a 1-unit decoy at 5 gil can't drag your retainer prices to the floor while real stacks sit at 1.2k. If you don't need that, install upstream Dagobert instead.",
   "ApplicableVersion": "any",
   "DalamudApiLevel": 15,
   "TestingDalamudApiLevel": 15,
