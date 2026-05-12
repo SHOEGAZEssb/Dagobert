@@ -2,7 +2,7 @@ name: Publish
 on:
   push:
     tags:
-      - '*.*.*'
+      - '*.*.*.*'
 jobs:
   Build:
     permissions:
@@ -17,14 +17,8 @@ jobs:
       - name: Get Environment Variables
         run: |
           $tag = "${{ github.ref }}" -replace 'refs/tags/', ''
-          # .NET pads AssemblyVersion to 4 components; the in-zip Dalamud manifest reflects
-          # the padded value. Pad the workflow's exposed version to match so pluginmaster.json
-          # and the in-zip manifest agree, which Dalamud's installer requires.
-          $parts = $tag.Split('.')
-          if ($parts.Length -eq 3) { $assemblyVersion = "$tag.0" } else { $assemblyVersion = $tag }
-
           "tag=$tag" | Out-File -Append -FilePath $Env:GITHUB_ENV
-          "assembly_version=$assemblyVersion" | Out-File -Append -FilePath $Env:GITHUB_ENV
+          "assembly_version=$tag" | Out-File -Append -FilePath $Env:GITHUB_ENV
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v5
