@@ -50,8 +50,12 @@ internal static class BaitGuard
       .OrderBy(i => listings[i].PricePerUnit)
       .ToList();
 
+    // A single candidate has no comparison set, so neither the floor nor the gap
+    // filter can run. Returning it would trust a lone listing at face value, which
+    // is exactly the case bait guard exists to prevent. Refuse instead; the caller
+    // will accumulate more batches or hold position.
     if (sorted.Count == 1)
-      return sorted[0];
+      return null;
 
     // Filter 1: minimum stack-size threshold. Items normally sold in stacks
     // (materia, gathered mats, food) frequently see 1-unit bait listings; raising
