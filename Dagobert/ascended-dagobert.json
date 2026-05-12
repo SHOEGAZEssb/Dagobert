@@ -9,6 +9,15 @@
   "Tags": [
     "Utility"
   ],
+  "CategoryTags": [
+    "other"
+  ],
+  "LoadRequiredState": 0,
+  "LoadSync": false,
+  "CanUnloadAsync": false,
+  "LoadPriority": 0,
+  "IsTestingExclusive": false,
+  "AcceptsFeedback": true,
   "RepoUrl": "https://github.com/jkleinne/ascended-dagobert",
   "InternalName": "ascended-dagobert",
   "IconUrl": "",
