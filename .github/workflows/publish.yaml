@@ -1,0 +1,119 @@
+name: Publish
+on:
+  push:
+    tags:
+      - '*.*.*'
+jobs:
+  Build:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Get Environment Variables
+        run: |
+          $tag = "${{ github.ref }}" -replace 'refs/tags/', ''
+          # .NET pads AssemblyVersion to 4 components; the in-zip Dalamud manifest reflects
+          # the padded value. Pad the workflow's exposed version to match so pluginmaster.json
+          # and the in-zip manifest agree, which Dalamud's installer requires.
+          $parts = $tag.Split('.')
+          if ($parts.Length -eq 3) { $assemblyVersion = "$tag.0" } else { $assemblyVersion = $tag }
+
+          "tag=$tag" | Out-File -Append -FilePath $Env:GITHUB_ENV
+          "assembly_version=$assemblyVersion" | Out-File -Append -FilePath $Env:GITHUB_ENV
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Download Dalamud Latest
+        run: |
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
+          Expand-Archive -Force latest.zip -DestinationPath "$env:AppData\XIVLauncher\addon\Hooks\dev"
+
+      - name: Restore Nuget Packages
+        run: dotnet restore Dagobert/Dagobert.csproj
+
+      - name: Build Plugin
+        run: dotnet build --no-restore -c Release Dagobert/Dagobert.csproj -p:AssemblyVersion=${{ env.assembly_version }} -p:FileVersion=${{ env.assembly_version }} -p:PackageVersion=${{ env.tag }} -p:InformationalVersion=${{ env.tag }} --output .\build
+
+      - name: Generate pluginmaster.json
+        shell: pwsh
+        run: |
+          $manifest = Get-Content Dagobert/Dagobert.json -Raw | ConvertFrom-Json
+          $downloadUrl = "https://github.com/jkleinne/ascended-dagobert/releases/download/${{ env.tag }}/latest.zip"
+          $entry = [ordered]@{
+            Author                  = $manifest.Author
+            Name                    = $manifest.Name
+            InternalName            = $manifest.InternalName
+            Description             = $manifest.Description
+            Punchline               = $manifest.Punchline
+            RepoUrl                 = $manifest.RepoUrl
+            ApplicableVersion       = $manifest.ApplicableVersion
+            DalamudApiLevel         = $manifest.DalamudApiLevel
+            TestingDalamudApiLevel  = $manifest.TestingDalamudApiLevel
+            Tags                    = $manifest.Tags
+            CategoryTags            = $manifest.CategoryTags
+            LoadRequiredState       = $manifest.LoadRequiredState
+            LoadSync                = $manifest.LoadSync
+            CanUnloadAsync          = $manifest.CanUnloadAsync
+            LoadPriority            = $manifest.LoadPriority
+            IsTestingExclusive      = $manifest.IsTestingExclusive
+            IconUrl                 = $manifest.IconUrl
+            AcceptsFeedback         = $manifest.AcceptsFeedback
+            AssemblyVersion         = "${{ env.assembly_version }}"
+            TestingAssemblyVersion  = "${{ env.assembly_version }}"
+            DownloadLinkInstall     = $downloadUrl
+            DownloadLinkTesting     = $downloadUrl
+            DownloadLinkUpdate      = $downloadUrl
+            DownloadCount           = 0
+            LastUpdate              = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+          }
+          ConvertTo-Json -InputObject @($entry) -Depth 10 | Set-Content pluginmaster.json -NoNewline
+
+      - name: Publish Plugin
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            ./build/Dagobert/latest.zip
+            ./pluginmaster.json
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout Hub Repo
+        uses: actions/checkout@v6
+        with:
+          repository: jkleinne/ascended-plugins
+          token: ${{ secrets.PLUGIN_HUB_TOKEN }}
+          path: hub
+
+      - name: Sync Entry to Hub
+        shell: pwsh
+        run: |
+          $newEntry = @(Get-Content pluginmaster.json -Raw | ConvertFrom-Json)[0]
+          $hub = @(Get-Content hub/pluginmaster.json -Raw | ConvertFrom-Json)
+          $existing = $hub | Where-Object { $_.InternalName -eq $newEntry.InternalName }
+          if ($null -ne $existing) {
+            $merged = $hub | ForEach-Object {
+              if ($_.InternalName -eq $newEntry.InternalName) { $newEntry } else { $_ }
+            }
+          } else {
+            $merged = @($hub) + @($newEntry)
+          }
+          ConvertTo-Json -InputObject @($merged) -Depth 10 | Set-Content hub/pluginmaster.json -NoNewline
+
+          Set-Location hub
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pluginmaster.json
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "No changes to hub pluginmaster.json; skipping push."
+          } else {
+            git commit -m "Sync ascended-dagobert ${{ env.tag }}"
+            git push
+          }
