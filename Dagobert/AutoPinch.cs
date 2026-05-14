@@ -178,6 +178,7 @@ namespace Dagobert
         if (ImGui.Button("Cancel"))
         {
           _taskManager.Abort();
+          AutoRetainerIPC.Suppressed(false);
           RemoveTalkAddonListeners();
         }
         if (ImGui.IsItemHovered())
@@ -209,6 +210,8 @@ namespace Dagobert
       ClearState();
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
+        AutoRetainerIPC.Suppressed(true);
+
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "Talk", SkipRetainerDialog);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "Talk", SkipRetainerDialog);
 
@@ -224,28 +227,31 @@ namespace Dagobert
         if (allDisabled)
         {
           Communicator.PrintAllRetainersDisabled();
-          return;
         }
-        
-        // If no retainers are explicitly enabled, enable all by default
-        bool allEnabled = Plugin.Configuration.EnabledRetainerNames.Count == 0;
-        
-        for (int i = 0; i < num; i++)
+        else
         {
-          var retainerName = retainers[i].Name;
+          // If no retainers are explicitly enabled, enable all by default
+          bool allEnabled = Plugin.Configuration.EnabledRetainerNames.Count == 0;
           
-          // Skip retainers that are excluded in configuration
-          if (!allEnabled && !Plugin.Configuration.EnabledRetainerNames.Contains(retainerName))
+          for (int i = 0; i < num; i++)
           {
-            Svc.Log.Debug($"Skipping retainer '{retainerName}' (excluded by user configuration)");
-            continue;
+            var retainerName = retainers[i].Name;
+            
+            // Skip retainers that are excluded in configuration
+            if (!allEnabled && !Plugin.Configuration.EnabledRetainerNames.Contains(retainerName))
+            {
+              Svc.Log.Debug($"Skipping retainer '{retainerName}' (excluded by user configuration)");
+              continue;
+            }
+            EnqueueSingleRetainer(i);
           }
-          EnqueueSingleRetainer(i);
+          
+          _taskManager.Enqueue(RemoveTalkAddonListeners);
+          if (Plugin.Configuration.TTSWhenAllDone)
+            _taskManager.Enqueue(() => SpeakTTS(Plugin.Configuration.TTSWhenAllDoneMsg), "SpeakTTSAll");
         }
 
-        _taskManager.Enqueue(RemoveTalkAddonListeners);
-        if (Plugin.Configuration.TTSWhenAllDone)
-          _taskManager.Enqueue(() => SpeakTTS(Plugin.Configuration.TTSWhenAllDoneMsg), "SpeakTTSAll");
+        _taskManager.Enqueue(() => AutoRetainerIPC.Suppressed(false));
       }
     }
 
