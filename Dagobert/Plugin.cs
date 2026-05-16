@@ -50,6 +50,7 @@ public sealed class Plugin : IDalamudPlugin
     ECommonsMain.Init(PluginInterface, this);
     _autoPinch = new AutoPinch();
     WindowSystem.AddWindow(_autoPinch);
+    AutoRetainerIPC.Initialize();
   }
 
   public void Dispose()
