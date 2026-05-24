@@ -53,39 +53,39 @@ namespace Dagobert
       if (!_newRequest)
         return;
 
-      var i = 0;
-      if (_useHq && _items.Single(j => j.RowId == currentOfferings.ItemListings[0].ItemId).CanBeHq)
-      {
-        while (i < currentOfferings.ItemListings.Count && !currentOfferings.ItemListings[i].IsHq)
-          i++;
-      }
-      else
-      {
-        if (currentOfferings.ItemListings.Count > 0)
-          i = 0;
-        else
-          i = currentOfferings.ItemListings.Count;
-      }
-
-      if (i >= currentOfferings.ItemListings.Count || currentOfferings.RequestId == _lastRequestId)
+      if (currentOfferings.ItemListings.Count == 0)
       {
         NewPrice = -1;
-        return; // wait for more incoming offerings (currentOfferings only contains 10 per call)
+        return;
       }
-      else
+
+      var skipNq = _useHq && _items.Single(j => j.RowId == currentOfferings.ItemListings[0].ItemId).CanBeHq;
+      var i = 0;
+      while (i < currentOfferings.ItemListings.Count)
       {
-        int price;
-
-        if (!Plugin.Configuration.UndercutSelf && IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId))
-          price = (int)currentOfferings.ItemListings[i].PricePerUnit;
-        else if (Plugin.Configuration.UndercutMode == UndercutMode.FixedAmount)
-          price = Math.Max((int)currentOfferings.ItemListings[i].PricePerUnit - Plugin.Configuration.UndercutAmount, 1);
+        if (skipNq && !currentOfferings.ItemListings[i].IsHq)
+          i++;
         else
-          price = Math.Max((100 - Plugin.Configuration.UndercutAmount) * (int)currentOfferings.ItemListings[i].PricePerUnit / 100, 1);
-
-        NewPrice = price;
+          break;
       }
 
+      // offerings arrive in batches of 10; if no match in this batch, wait for the next
+      if (i >= currentOfferings.ItemListings.Count)
+        return;
+
+      if (currentOfferings.RequestId == _lastRequestId)
+        return;
+
+      int price;
+
+      if (!Plugin.Configuration.UndercutSelf && IsOwnRetainer(currentOfferings.ItemListings[i].RetainerId))
+        price = (int)currentOfferings.ItemListings[i].PricePerUnit;
+      else if (Plugin.Configuration.UndercutMode == UndercutMode.FixedAmount)
+        price = Math.Max((int)currentOfferings.ItemListings[i].PricePerUnit - Plugin.Configuration.UndercutAmount, 1);
+      else
+        price = Math.Max((100 - Plugin.Configuration.UndercutAmount) * (int)currentOfferings.ItemListings[i].PricePerUnit / 100, 1);
+
+      NewPrice = price;
       _lastRequestId = currentOfferings.RequestId;
       _newRequest = false;
     }
