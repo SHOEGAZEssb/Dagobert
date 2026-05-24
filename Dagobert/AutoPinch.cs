@@ -481,6 +481,9 @@ namespace Dagobert
         if (_skipCurrentItem)
           return true;
 
+        if (!_newPrice.HasValue)
+          return false;
+
         // close compare price window
         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("ItemSearchResult", out var addon))
           addon->Close(true);
@@ -490,7 +493,7 @@ namespace Dagobert
           var ui = &retainerSell->AtkUnitBase;
           var itemName = retainerSell->ItemName->NodeText.ToString();
           _oldPrice = retainerSell->AskingPrice->Value;
-          if (!_newPrice.HasValue || !(_newPrice > 0))
+          if (!(_newPrice > 0))
           {
             if (Plugin.Configuration.DefaultAmount == 0)
             {
