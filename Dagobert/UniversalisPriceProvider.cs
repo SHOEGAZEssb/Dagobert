@@ -1,7 +1,10 @@
+using Dalamud.Game.Text.SeStringHandling;
+using ECommons;
 using ECommons.DalamudServices;
 using Lumina.Excel.Sheets;
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,11 +21,11 @@ internal sealed class UniversalisPriceProvider : IDisposable
     _client = new UniversalisClient();
   }
 
-  public bool CanResolveItem(string itemName) => TryGetItem(itemName, out _, out _);
+  public bool CanResolveItem(string itemName, string rawItemName) => TryGetItem(itemName, rawItemName, out _, out _);
 
-  public async Task<int> GetNewPrice(string itemName, CancellationToken cancellationToken)
+  public async Task<int> GetNewPrice(string itemName, string rawItemName, CancellationToken cancellationToken)
   {
-    if (!TryGetItem(itemName, out var itemId, out var hqOnly))
+    if (!TryGetItem(itemName, rawItemName, out var itemId, out var hqOnly))
     {
       Svc.Log.Warning($"Could not resolve item id for Universalis price check: {NormalizeItemName(itemName)}");
       return -1;
@@ -58,18 +61,39 @@ internal sealed class UniversalisPriceProvider : IDisposable
     _client.Dispose();
   }
 
-  private bool TryGetItem(string itemName, out uint itemId, out bool hqOnly)
+  private bool TryGetItem(string itemName, string rawItemName, out uint itemId, out bool hqOnly)
   {
-    var itemHq = itemName.Contains('\uE03C');
+    var itemHq = itemName.Contains('\uE03C') || rawItemName.Contains('\uE03C');
     var normalizedItemName = NormalizeItemName(itemName);
 
-    itemId = _items
-      .Where(item => item.Name.ToString().Equals(normalizedItemName, StringComparison.Ordinal))
-      .Select(item => item.RowId)
-      .FirstOrDefault();
+    itemId = ResolveItemId(normalizedItemName, itemName);
+    if (itemId == 0)
+      itemId = ResolveItemId(normalizedItemName, rawItemName);
 
     hqOnly = Plugin.Configuration.HQ && itemHq;
     return itemId != 0;
+  }
+
+  private uint ResolveItemId(string normalizedItemName, string rawItemName)
+  {
+    var exactMatch = _items
+      .Where(item => item.Name.GetText().Equals(normalizedItemName, StringComparison.OrdinalIgnoreCase))
+      .Select(item => item.RowId)
+      .FirstOrDefault();
+
+    if (exactMatch != 0)
+      return exactMatch;
+
+    return _items
+      .Select(item => new
+      {
+        item.RowId,
+        Name = item.Name.GetText(),
+      })
+      .Where(item => item.Name.Length > 0 && rawItemName.Contains(item.Name, StringComparison.OrdinalIgnoreCase))
+      .OrderByDescending(item => item.Name.Length)
+      .Select(item => item.RowId)
+      .FirstOrDefault();
   }
 
   private static int CalculateNewPrice(long pricePerUnit, bool ownRetainer)
@@ -87,6 +111,19 @@ internal sealed class UniversalisPriceProvider : IDisposable
 
   private static string NormalizeItemName(string itemName)
   {
-    return itemName.Replace("\uE03C", string.Empty).Trim();
+    var normalizedItemName = itemName.Replace("\uE03C", string.Empty).Trim();
+
+    try
+    {
+      var text = SeString.Parse(Encoding.UTF8.GetBytes(normalizedItemName)).GetText().Trim();
+      if (!string.IsNullOrEmpty(text))
+        normalizedItemName = text;
+    }
+    catch
+    {
+      // If this is already plain text, or malformed SeString text, fall back to the raw visible substring matching.
+    }
+
+    return normalizedItemName;
   }
 }

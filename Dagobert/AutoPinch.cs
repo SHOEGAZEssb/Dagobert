@@ -445,8 +445,9 @@ namespace Dagobert
 
       if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var addon) && GenericHelpers.IsAddonReady(&addon->AtkUnitBase))
       {
-        var itemName = addon->ItemName->NodeText.ToString();
-        if (Plugin.Configuration.UseUniversalisDataCenterPrices && _universalisPriceProvider.CanResolveItem(itemName))
+        var itemName = GetRetainerSellItemName(addon);
+        var rawItemName = GetRetainerSellRawItemName(addon);
+        if (Plugin.Configuration.UseUniversalisDataCenterPrices && _universalisPriceProvider.CanResolveItem(itemName, rawItemName))
           return true;
 
         if (!_cachedPrices.TryGetValue(itemName, out int? value) || value <= 0)
@@ -469,7 +470,8 @@ namespace Dagobert
       if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var addon) && GenericHelpers.IsAddonReady(&addon->AtkUnitBase))
       {
         // if we have a cached price, dont click compare
-        var itemName = addon->ItemName->NodeText.ToString();
+        var itemName = GetRetainerSellItemName(addon);
+        var rawItemName = GetRetainerSellRawItemName(addon);
         if (_cachedPrices.TryGetValue(itemName, out int? value) && value > 0)
         {
           Svc.Log.Debug($"{itemName}: using cached price");
@@ -478,10 +480,10 @@ namespace Dagobert
         }
         else
         {
-          if (Plugin.Configuration.UseUniversalisDataCenterPrices && _universalisPriceProvider.CanResolveItem(itemName))
+          if (Plugin.Configuration.UseUniversalisDataCenterPrices && _universalisPriceProvider.CanResolveItem(itemName, rawItemName))
           {
             Svc.Log.Debug($"{itemName}: requesting Universalis data center price");
-            StartUniversalisPriceRequest(itemName);
+            StartUniversalisPriceRequest(itemName, rawItemName);
             return true;
           }
 
@@ -511,7 +513,7 @@ namespace Dagobert
         if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var retainerSell) && GenericHelpers.IsAddonReady(&retainerSell->AtkUnitBase))
         {
           var ui = &retainerSell->AtkUnitBase;
-          var itemName = retainerSell->ItemName->NodeText.ToString();
+          var itemName = GetRetainerSellItemName(retainerSell);
           _oldPrice = retainerSell->AskingPrice->Value;
           if (!(_newPrice > 0))
           {
@@ -560,22 +562,32 @@ namespace Dagobert
       _newPrice = e.NewPrice;
     }
 
-    private void StartUniversalisPriceRequest(string itemName)
+    private static unsafe string GetRetainerSellItemName(AddonRetainerSell* addon)
+    {
+      return addon->ItemName->NodeText.GetText();
+    }
+
+    private static unsafe string GetRetainerSellRawItemName(AddonRetainerSell* addon)
+    {
+      return addon->ItemName->NodeText.ToString();
+    }
+
+    private void StartUniversalisPriceRequest(string itemName, string rawItemName)
     {
       CancelUniversalisPriceRequest();
 
       var requestId = ++_universalisPriceRequestId;
       _universalisPriceRequestCts = new CancellationTokenSource();
-      _ = CompleteUniversalisPriceRequest(itemName, requestId, _universalisPriceRequestCts.Token);
+      _ = CompleteUniversalisPriceRequest(itemName, rawItemName, requestId, _universalisPriceRequestCts.Token);
     }
 
-    private async Task CompleteUniversalisPriceRequest(string itemName, int requestId, CancellationToken cancellationToken)
+    private async Task CompleteUniversalisPriceRequest(string itemName, string rawItemName, int requestId, CancellationToken cancellationToken)
     {
       var price = -1;
 
       try
       {
-        price = await _universalisPriceProvider.GetNewPrice(itemName, cancellationToken).ConfigureAwait(false);
+        price = await _universalisPriceProvider.GetNewPrice(itemName, rawItemName, cancellationToken).ConfigureAwait(false);
       }
       catch (OperationCanceledException)
       {
