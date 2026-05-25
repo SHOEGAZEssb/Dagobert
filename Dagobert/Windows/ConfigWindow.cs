@@ -119,6 +119,19 @@ public sealed class ConfigWindow : Window
       ImGui.EndTooltip();
     }
 
+    var useUniversalisDataCenterPrices = Plugin.Configuration.UseUniversalisDataCenterPrices;
+    if (ImGui.Checkbox("Use Universalis data center prices", ref useUniversalisDataCenterPrices))
+    {
+      Plugin.Configuration.UseUniversalisDataCenterPrices = useUniversalisDataCenterPrices;
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("If checked, price checks use the cheapest listing on your current data center from Universalis.");
+      ImGui.EndTooltip();
+    }
+
     ImGui.Separator();
 
     int currentMBDelay = Plugin.Configuration.GetMBPricesDelayMS;

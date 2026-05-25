@@ -42,6 +42,8 @@ public sealed class Configuration : IPluginConfiguration
 
   public bool UndercutSelf { get; set; } = false;
 
+  public bool UseUniversalisDataCenterPrices { get; set; } = false;
+
   public bool ShowPriceAdjustmentsMessages { get; set; } = true;
 
   public bool ShowRetainerNames { get; set; } = true;

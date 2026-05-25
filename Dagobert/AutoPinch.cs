@@ -18,6 +18,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Speech.Synthesis;
+using System.Threading;
+using System.Threading.Tasks;
 using Dalamud.Game.Text.SeStringHandling;
 using static ECommons.UIHelpers.AtkReaderImplementations.ReaderContextMenu;
 
@@ -26,17 +28,22 @@ namespace Dagobert
   internal sealed class AutoPinch : Window, IDisposable
   {
     private readonly MarketBoardHandler _mbHandler;
+    private readonly UniversalisPriceProvider _universalisPriceProvider;
     private int? _oldPrice;
     private int? _newPrice;
     private bool _skipCurrentItem = false;
     private readonly TaskManager _taskManager;
     private Dictionary<string, int?> _cachedPrices = [];
+    private int _universalisPriceRequestId;
+    private bool _disposed;
+    private CancellationTokenSource? _universalisPriceRequestCts;
 
     public AutoPinch()
       : base("Dagobert", ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.AlwaysAutoResize, true)
     {
       _mbHandler = new MarketBoardHandler();
       _mbHandler.NewPriceReceived += MBHandler_NewPriceReceived;
+      _universalisPriceProvider = new UniversalisPriceProvider();
 
       // window
       Position = new System.Numerics.Vector2(0, 0);
@@ -73,6 +80,9 @@ namespace Dagobert
 
     public void Dispose()
     {
+      _disposed = true;
+      CancelUniversalisPriceRequest();
+      _universalisPriceProvider.Dispose();
       Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, RetainerSellPostSetup);
       _mbHandler.NewPriceReceived -= MBHandler_NewPriceReceived;
       _mbHandler.Dispose();
@@ -436,6 +446,9 @@ namespace Dagobert
       if (GenericHelpers.TryGetAddonByName<AddonRetainerSell>("RetainerSell", out var addon) && GenericHelpers.IsAddonReady(&addon->AtkUnitBase))
       {
         var itemName = addon->ItemName->NodeText.ToString();
+        if (Plugin.Configuration.UseUniversalisDataCenterPrices && _universalisPriceProvider.CanResolveItem(itemName))
+          return true;
+
         if (!_cachedPrices.TryGetValue(itemName, out int? value) || value <= 0)
         {
           Svc.Log.Debug($"{itemName} has no cached price (or that price was <= 0), delaying next mb open");
@@ -465,6 +478,13 @@ namespace Dagobert
         }
         else
         {
+          if (Plugin.Configuration.UseUniversalisDataCenterPrices && _universalisPriceProvider.CanResolveItem(itemName))
+          {
+            Svc.Log.Debug($"{itemName}: requesting Universalis data center price");
+            StartUniversalisPriceRequest(itemName);
+            return true;
+          }
+
           Svc.Log.Debug($"Clicking compare prices");
           ECommons.Automation.Callback.Fire(&addon->AtkUnitBase, true, 4);
           return true;
@@ -538,6 +558,50 @@ namespace Dagobert
     {
       Svc.Log.Debug($"New price received: {e.NewPrice}");
       _newPrice = e.NewPrice;
+    }
+
+    private void StartUniversalisPriceRequest(string itemName)
+    {
+      CancelUniversalisPriceRequest();
+
+      var requestId = ++_universalisPriceRequestId;
+      _universalisPriceRequestCts = new CancellationTokenSource();
+      _ = CompleteUniversalisPriceRequest(itemName, requestId, _universalisPriceRequestCts.Token);
+    }
+
+    private async Task CompleteUniversalisPriceRequest(string itemName, int requestId, CancellationToken cancellationToken)
+    {
+      var price = -1;
+
+      try
+      {
+        price = await _universalisPriceProvider.GetNewPrice(itemName, cancellationToken).ConfigureAwait(false);
+      }
+      catch (OperationCanceledException)
+      {
+        return;
+      }
+      catch (Exception ex)
+      {
+        Svc.Log.Warning(ex, $"Failed to fetch Universalis price for {itemName}");
+      }
+
+      await Svc.Framework.RunOnFrameworkThread(() =>
+      {
+        if (_disposed || requestId != _universalisPriceRequestId)
+          return;
+
+        Svc.Log.Debug($"New Universalis price received: {price}");
+        _newPrice = price;
+      });
+    }
+
+    private void CancelUniversalisPriceRequest()
+    {
+      _universalisPriceRequestId++;
+      _universalisPriceRequestCts?.Cancel();
+      _universalisPriceRequestCts?.Dispose();
+      _universalisPriceRequestCts = null;
     }
 
     private unsafe void SkipRetainerDialog(AddonEvent type, AddonArgs args)
@@ -620,6 +684,7 @@ namespace Dagobert
       _newPrice = null;
       _cachedPrices = [];
       _skipCurrentItem = false;
+      CancelUniversalisPriceRequest();
     }
   }
 }
