@@ -31,9 +31,10 @@ namespace Dagobert
     private readonly UniversalisPriceProvider _universalisPriceProvider;
     private int? _oldPrice;
     private int? _newPrice;
+    private bool _newPriceFromUniversalis;
     private bool _skipCurrentItem = false;
     private readonly TaskManager _taskManager;
-    private Dictionary<string, int?> _cachedPrices = [];
+    private Dictionary<string, CachedPrice> _cachedPrices = [];
     private int _universalisPriceRequestId;
     private bool _disposed;
     private CancellationTokenSource? _universalisPriceRequestCts;
@@ -450,7 +451,7 @@ namespace Dagobert
         if (Plugin.Configuration.UseUniversalisDataCenterPrices && _universalisPriceProvider.CanResolveItem(itemName, rawItemName))
           return true;
 
-        if (!_cachedPrices.TryGetValue(itemName, out int? value) || value <= 0)
+        if (!_cachedPrices.TryGetValue(itemName, out var cachedPrice) || cachedPrice.Value <= 0)
         {
           Svc.Log.Debug($"{itemName} has no cached price (or that price was <= 0), delaying next mb open");
           _taskManager.InsertDelayNext(Plugin.Configuration.GetMBPricesDelayMS);
@@ -472,10 +473,11 @@ namespace Dagobert
         // if we have a cached price, dont click compare
         var itemName = GetRetainerSellItemName(addon);
         var rawItemName = GetRetainerSellRawItemName(addon);
-        if (_cachedPrices.TryGetValue(itemName, out int? value) && value > 0)
+        if (_cachedPrices.TryGetValue(itemName, out var cachedPrice) && cachedPrice.Value > 0)
         {
           Svc.Log.Debug($"{itemName}: using cached price");
-          _newPrice = value;
+          _newPrice = cachedPrice.Value;
+          _newPriceFromUniversalis = cachedPrice.FromUniversalis;
           return true;
         }
         else
@@ -527,15 +529,16 @@ namespace Dagobert
             }
 	    Svc.Log.Warning("SetNewPrice: Using default amount");
             _newPrice = Plugin.Configuration.DefaultAmount;
+            _newPriceFromUniversalis = false;
 	    Communicator.PrintUsingDefaultAmountWarning(itemName, _newPrice.Value);
           }
           var cutPercentage = ((float)_newPrice.Value - _oldPrice.Value) / _oldPrice.Value * 100f;
           if (cutPercentage >= -Plugin.Configuration.MaxUndercutPercentage)
           {
             Svc.Log.Debug($"Setting new price");
-            _cachedPrices.TryAdd(itemName, _newPrice);
+            _cachedPrices.TryAdd(itemName, new CachedPrice(_newPrice.Value, _newPriceFromUniversalis));
             retainerSell->AskingPrice->SetValue(_newPrice.Value);
-            Communicator.PrintPriceUpdate(itemName, _oldPrice.Value, _newPrice.Value, cutPercentage);
+            Communicator.PrintPriceUpdate(itemName, _oldPrice.Value, _newPrice.Value, cutPercentage, _newPriceFromUniversalis);
           }
           else
             Communicator.PrintAboveMaxCutError(itemName);
@@ -552,6 +555,7 @@ namespace Dagobert
       {
         _oldPrice = null;
         _newPrice = null;
+        _newPriceFromUniversalis = false;
         _skipCurrentItem = false;
       }
     }
@@ -560,6 +564,7 @@ namespace Dagobert
     {
       Svc.Log.Debug($"New price received: {e.NewPrice}");
       _newPrice = e.NewPrice;
+      _newPriceFromUniversalis = false;
     }
 
     private static unsafe string GetRetainerSellItemName(AddonRetainerSell* addon)
@@ -577,6 +582,7 @@ namespace Dagobert
       CancelUniversalisPriceRequest();
 
       var requestId = ++_universalisPriceRequestId;
+      _newPriceFromUniversalis = false;
       _universalisPriceRequestCts = new CancellationTokenSource();
       _ = CompleteUniversalisPriceRequest(itemName, rawItemName, requestId, _universalisPriceRequestCts.Token);
     }
@@ -605,6 +611,7 @@ namespace Dagobert
 
         Svc.Log.Debug($"New Universalis price received: {price}");
         _newPrice = price;
+        _newPriceFromUniversalis = price > 0;
       });
     }
 
@@ -694,9 +701,12 @@ namespace Dagobert
     private void ClearState()
     {
       _newPrice = null;
+      _newPriceFromUniversalis = false;
       _cachedPrices = [];
       _skipCurrentItem = false;
       CancelUniversalisPriceRequest();
     }
+
+    private readonly record struct CachedPrice(int Value, bool FromUniversalis);
   }
 }

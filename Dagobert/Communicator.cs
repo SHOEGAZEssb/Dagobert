@@ -13,7 +13,7 @@ public static class Communicator
 {
   private static readonly ExcelSheet<Item> ItemSheet = Svc.Data.GetExcelSheet<Item>();
 
-  public static void PrintPriceUpdate(string itemName, int? oldPrice, int? newPrice, float cutPercentage)
+  public static void PrintPriceUpdate(string itemName, int? oldPrice, int? newPrice, float cutPercentage, bool priceFromUniversalis = false)
   {
     if (!Plugin.Configuration.ShowPriceAdjustmentsMessages)
       return;
@@ -22,19 +22,20 @@ public static class Communicator
       return;
 
     var dec = oldPrice.Value > newPrice.Value ? "cut" : "increase";
+    var sourceText = priceFromUniversalis ? " (from Universalis data center)" : string.Empty;
     var itemPayload = RawItemNameToItemPayload(itemName);
 
     if (itemPayload != null)
     {
       var seString = new SeStringBuilder()
           .AddItemLink(itemPayload.ItemId, itemPayload.IsHQ)
-          .AddText($": Pinching from {oldPrice.Value:N0} to {newPrice.Value:N0} gil, a {dec} of {MathF.Abs(MathF.Round(cutPercentage, 2))}%")
+          .AddText($": Pinching from {oldPrice.Value:N0} to {newPrice.Value:N0} gil{sourceText}, a {dec} of {MathF.Abs(MathF.Round(cutPercentage, 2))}%")
           .Build();
 
       Svc.Chat.Print(seString);
     }
     else
-      Svc.Chat.Print($"{itemName}: Pinching from {oldPrice.Value:N0} to {newPrice.Value:N0}, a {dec} of {MathF.Abs(MathF.Round(cutPercentage, 2))}%");
+      Svc.Chat.Print($"{itemName}: Pinching from {oldPrice.Value:N0} to {newPrice.Value:N0}{sourceText}, a {dec} of {MathF.Abs(MathF.Round(cutPercentage, 2))}%");
   }
 
   private static ItemPayload? RawItemNameToItemPayload(string itemName)
