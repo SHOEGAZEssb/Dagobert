@@ -35,6 +35,7 @@ namespace Dagobert
     private bool _skipCurrentItem = false;
     private readonly TaskManager _taskManager;
     private Dictionary<string, CachedPrice> _cachedPrices = [];
+    private bool _cachedPricesUseUniversalisDataCenterPrices;
     private int _universalisPriceRequestId;
     private bool _disposed;
     private CancellationTokenSource? _universalisPriceRequestCts;
@@ -45,6 +46,7 @@ namespace Dagobert
       _mbHandler = new MarketBoardHandler();
       _mbHandler.NewPriceReceived += MBHandler_NewPriceReceived;
       _universalisPriceProvider = new UniversalisPriceProvider();
+      _cachedPricesUseUniversalisDataCenterPrices = Plugin.Configuration.UseUniversalisDataCenterPrices;
 
       // window
       Position = new System.Numerics.Vector2(0, 0);
@@ -93,6 +95,7 @@ namespace Dagobert
     {
       try
       {
+        ClearCachedPricesIfUniversalisSettingChanged();
         DrawForRetainerList();
         DrawForRetainerSellList();
       }
@@ -703,8 +706,20 @@ namespace Dagobert
       _newPrice = null;
       _newPriceFromUniversalis = false;
       _cachedPrices = [];
+      _cachedPricesUseUniversalisDataCenterPrices = Plugin.Configuration.UseUniversalisDataCenterPrices;
       _skipCurrentItem = false;
       CancelUniversalisPriceRequest();
+    }
+
+    private void ClearCachedPricesIfUniversalisSettingChanged()
+    {
+      var useUniversalisDataCenterPrices = Plugin.Configuration.UseUniversalisDataCenterPrices;
+      if (_cachedPricesUseUniversalisDataCenterPrices == useUniversalisDataCenterPrices)
+        return;
+
+      _cachedPrices.Clear();
+      _cachedPricesUseUniversalisDataCenterPrices = useUniversalisDataCenterPrices;
+      Svc.Log.Debug("Use Universalis data center prices setting changed; cleared cached prices");
     }
 
     private readonly record struct CachedPrice(int Value, bool FromUniversalis);
