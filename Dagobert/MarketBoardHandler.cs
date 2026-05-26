@@ -12,15 +12,17 @@ namespace Dagobert
 {
   internal unsafe sealed class MarketBoardHandler : IDisposable
   {
+    private const int UnknownRequestId = -1;
     private const int ListingsPerBatch = 10;
 
     private readonly Lumina.Excel.ExcelSheet<Item> _items;
     private bool _newRequest;
     private bool _useHq;
     private bool _itemHq;
-    private int _lastRequestId = -1;
-    private int _pendingNoMatchRequestId = -1;
+    private int _lastRequestId = UnknownRequestId;
+    private int _pendingNoMatchRequestId = UnknownRequestId;
     private long _pendingNoMatchTimeoutAt;
+    private long _pendingNoOfferingsTimeoutAt;
 
     private int NewPrice
     {
@@ -62,6 +64,8 @@ namespace Dagobert
       if (currentOfferings.RequestId == _lastRequestId)
         return;
 
+      ClearPendingNoOfferings();
+
       if (currentOfferings.ItemListings.Count == 0)
       {
         CompletePriceRequest(-1, currentOfferings.RequestId);
@@ -88,7 +92,7 @@ namespace Dagobert
         }
 
         _pendingNoMatchRequestId = currentOfferings.RequestId;
-        _pendingNoMatchTimeoutAt = Environment.TickCount64 + GetNoMatchTimeoutMs();
+        _pendingNoMatchTimeoutAt = Environment.TickCount64 + GetMarketBoardResultTimeoutMs();
         return;
       }
 
@@ -108,11 +112,22 @@ namespace Dagobert
 
     private void FrameworkOnUpdate(object _)
     {
-      if (!_newRequest || _pendingNoMatchRequestId < 0 || Environment.TickCount64 < _pendingNoMatchTimeoutAt)
+      if (!_newRequest)
         return;
 
-      Svc.Log.Debug("No matching market board listing received before timeout");
-      CompletePriceRequest(-1, _pendingNoMatchRequestId);
+      var now = Environment.TickCount64;
+      if (_pendingNoMatchRequestId >= 0 && now >= _pendingNoMatchTimeoutAt)
+      {
+        Svc.Log.Debug("No matching market board listing received before timeout");
+        CompletePriceRequest(-1, _pendingNoMatchRequestId);
+        return;
+      }
+
+      if (_pendingNoOfferingsTimeoutAt > 0 && now >= _pendingNoOfferingsTimeoutAt)
+      {
+        Svc.Log.Debug("No market board offerings received before timeout");
+        CompletePriceRequest(-1, UnknownRequestId);
+      }
     }
 
     private void ItemSearchResultPostSetup(AddonEvent type, AddonArgs args)
@@ -120,6 +135,7 @@ namespace Dagobert
       _newRequest = true;
       _useHq = Plugin.Configuration.HQ && _itemHq;
       ClearPendingNoMatch();
+      _pendingNoOfferingsTimeoutAt = Environment.TickCount64 + GetMarketBoardResultTimeoutMs();
     }
 
     private unsafe void AddonRetainerSellPostSetup(AddonEvent type, AddonArgs args)
@@ -149,20 +165,27 @@ namespace Dagobert
 
     private static bool IsOwnRetainer(ulong retainerId) => Plugin.Configuration.SeenRetainers.Contains(retainerId);
 
-    private static int GetNoMatchTimeoutMs() => Math.Max(Plugin.Configuration.MarketBoardKeepOpenMS, 1000);
+    private static int GetMarketBoardResultTimeoutMs() => Math.Max(Plugin.Configuration.MarketBoardKeepOpenMS, 1000);
 
     private void CompletePriceRequest(int price, int requestId)
     {
       ClearPendingNoMatch();
-      _lastRequestId = requestId;
+      ClearPendingNoOfferings();
+      if (requestId >= 0)
+        _lastRequestId = requestId;
       _newRequest = false;
       NewPrice = price;
     }
 
     private void ClearPendingNoMatch()
     {
-      _pendingNoMatchRequestId = -1;
+      _pendingNoMatchRequestId = UnknownRequestId;
       _pendingNoMatchTimeoutAt = 0;
+    }
+
+    private void ClearPendingNoOfferings()
+    {
+      _pendingNoOfferingsTimeoutAt = 0;
     }
   }
 }
