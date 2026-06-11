@@ -14,6 +14,11 @@ Open the configuration window with `/dagobert`.
 
 ## Configuration
 
+The `/dagobert` configuration window has two tabs:
+
+- `General` contains the normal pricing, timing, retainer, hotkey, chat, and TTS settings.
+- `Min/Max Prices` contains per-item minimum and maximum prices.
+
 ### Pricing
 
 | Option | Default | Description |
@@ -25,6 +30,20 @@ Open the configuration window with `/dagobert`.
 | Undercut Self | Off | When off, Dagobert will not undercut listings from your own retainers. |
 | Use Universalis data center prices | Off | Uses the cheapest listing on your current data center from Universalis instead of only the in-game Market Board result. |
 | Default amount | 0 gil | Fallback price when no price can be found. `0` disables the fallback. |
+
+### Per-Item Min/Max Prices
+
+Use the `Min/Max Prices` tab to set item-specific price limits. `0` means no limit.
+
+| Option | Description |
+| --- | --- |
+| Min | Lowest price Dagobert may set for that item. |
+| Max | Highest price Dagobert may set for that item. |
+| Remove | Deletes the item-specific limits. |
+
+Right-click an item in your inventory and choose `Add Dagobert price limits` to add it to the table. If the item is already configured, the same menu entry opens the configuration window as `Configure Dagobert price limits`.
+
+Per-item limits are applied after Dagobert finds a candidate price, including prices from Universalis, and before the price is written to the retainer listing.
 
 ### Timing
 

@@ -2,6 +2,7 @@
 using Dalamud.Game.ClientState.Keys;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Dagobert;
 
@@ -9,6 +10,36 @@ public enum UndercutMode
 {
   FixedAmount,
   Percentage
+}
+
+[Serializable]
+public sealed class ItemPriceLimit
+{
+  public uint ItemId { get; set; }
+
+  public int MinPrice { get; set; } = 0;
+
+  public int MaxPrice { get; set; } = 0;
+
+  public int Apply(int price)
+  {
+    var minPrice = Math.Max(MinPrice, 0);
+    var maxPrice = Math.Max(MaxPrice, 0);
+
+    if (minPrice > 0 && price < minPrice)
+      price = minPrice;
+
+    if (maxPrice > 0)
+    {
+      if (minPrice > 0 && maxPrice < minPrice)
+        maxPrice = minPrice;
+
+      if (price > maxPrice)
+        price = maxPrice;
+    }
+
+    return price;
+  }
 }
 
 [Serializable]
@@ -62,6 +93,8 @@ public sealed class Configuration : IPluginConfiguration
 
   public List<ulong> SeenRetainers { get; set; } = [];
 
+  public List<ItemPriceLimit> ItemPriceLimits { get; set; } = [];
+
   /// <summary>
   /// Set of retainer names that are enabled for auto pinch.
   /// If empty or null, all retainers are enabled by default.
@@ -76,6 +109,22 @@ public sealed class Configuration : IPluginConfiguration
   /// Used to display retainer selection even when the retainer list is not open.
   /// </summary>
   public List<string> LastKnownRetainerNames { get; set; } = [];
+
+  public ItemPriceLimit? GetItemPriceLimit(uint itemId)
+  {
+    return ItemPriceLimits.FirstOrDefault(limit => limit.ItemId == itemId);
+  }
+
+  public ItemPriceLimit GetOrAddItemPriceLimit(uint itemId)
+  {
+    var limit = GetItemPriceLimit(itemId);
+    if (limit != null)
+      return limit;
+
+    limit = new ItemPriceLimit { ItemId = itemId };
+    ItemPriceLimits.Add(limit);
+    return limit;
+  }
 
   public void Save()
   {

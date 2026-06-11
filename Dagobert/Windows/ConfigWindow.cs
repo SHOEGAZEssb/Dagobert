@@ -20,6 +20,26 @@ public sealed class ConfigWindow : Window
 
   public override void Draw()
   {
+    if (!ImGui.BeginTabBar("##dagobertConfigTabs"))
+      return;
+
+    if (ImGui.BeginTabItem("General"))
+    {
+      DrawGeneralConfig();
+      ImGui.EndTabItem();
+    }
+
+    if (ImGui.BeginTabItem("Min/Max Prices"))
+    {
+      DrawItemPriceLimits();
+      ImGui.EndTabItem();
+    }
+
+    ImGui.EndTabBar();
+  }
+
+  private static void DrawGeneralConfig()
+  {
     var hq = Plugin.Configuration.HQ;
     if (ImGui.Checkbox("Use HQ price", ref hq))
     {
@@ -147,8 +167,8 @@ public sealed class ConfigWindow : Window
     {
       ImGui.BeginTooltip();
       ImGui.SetTooltip("Delay in milliseconds before opening the market board price list.\r\n" +
-                       "Lower delay means faster auto pinching but may also cause market board price data to be unable to load.\r\n" +
-                       "Recommended to keep between 3000 and 4000ms. Reduce at your own risk!");
+              "Lower delay means faster auto pinching but may also cause market board price data to be unable to load.\r\n" +
+              "Recommended to keep between 3000 and 4000ms. Reduce at your own risk!");
       ImGui.EndTooltip();
     }
 
@@ -165,8 +185,8 @@ public sealed class ConfigWindow : Window
     {
       ImGui.BeginTooltip();
       ImGui.SetTooltip("Time in milliseconds to keep the marketboard open when fetching prices.\r\n" +
-                       "Lower delay means faster auto pinching but may also cause market board price data to be unable to load.\r\n" +
-                       "Recommended to keep between 1000 and 2000ms. Reduce at your own risk!");
+              "Lower delay means faster auto pinching but may also cause market board price data to be unable to load.\r\n" +
+              "Recommended to keep between 1000 and 2000ms. Reduce at your own risk!");
       ImGui.EndTooltip();
     }
 
@@ -230,8 +250,6 @@ public sealed class ConfigWindow : Window
       ImGui.SetTooltip("Default amount in case of error (0 = disabled)");
       ImGui.EndTooltip();
     }
-
-
     ImGui.Separator();
 
     ImGui.Text("Retainer Selection");
@@ -239,8 +257,8 @@ public sealed class ConfigWindow : Window
     {
       ImGui.BeginTooltip();
       ImGui.SetTooltip("Select which retainers should be included in auto pinch.\r\n" +
-                       "Unchecked retainers will be skipped when using 'Auto Pinch' on all retainers.\r\n" +
-                       "Note: Open the retainer list in-game to see and configure your retainers.");
+              "Unchecked retainers will be skipped when using 'Auto Pinch' on all retainers.\r\n" +
+              "Note: Open the retainer list in-game to see and configure your retainers.");
       ImGui.EndTooltip();
     }
 
@@ -249,26 +267,26 @@ public sealed class ConfigWindow : Window
     {
       string[]? retainerNameArray = null;
       bool namesUpdated = false;
-      
+
       if (TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && IsAddonReady(addon))
       {
         try
         {
           var retainerList = new AddonMaster.RetainerList(addon);
           retainerNameArray = [.. retainerList.Retainers.Select(r => r.Name)];
-          
+
           // Update stored retainer names if they changed
           var currentNames = new HashSet<string>(retainerNameArray);
           var storedNames = new HashSet<string>(Plugin.Configuration.LastKnownRetainerNames);
-          
+
           if (!currentNames.SetEquals(storedNames))
           {
             // Names changed - update the stored list
             Plugin.Configuration.LastKnownRetainerNames = [.. retainerNameArray];
-            
+
             // Remove enabled status for retainers that no longer exist
             Plugin.Configuration.EnabledRetainerNames.RemoveWhere(name => !currentNames.Contains(name) && name != Configuration.ALL_DISABLED_SENTINEL);
-            
+
             Plugin.Configuration.Save();
             namesUpdated = true;
           }
@@ -288,16 +306,16 @@ public sealed class ConfigWindow : Window
         for (int i = 0; i < namesToDisplay.Length; i++)
         {
           string retainerName = namesToDisplay[i];
-          
+
           // Empty set = all enabled, sentinel = all disabled, non-empty = explicit whitelist
           bool allDisabled = Plugin.Configuration.EnabledRetainerNames.Contains(Configuration.ALL_DISABLED_SENTINEL);
           bool enabled = !allDisabled && (Plugin.Configuration.EnabledRetainerNames.Count == 0 || Plugin.Configuration.EnabledRetainerNames.Contains(retainerName));
-          
+
           string label = $"{retainerName}##retainer{i}";
           if (ImGui.Checkbox(label, ref enabled))
           {
             Plugin.Configuration.EnabledRetainerNames.Remove(Configuration.ALL_DISABLED_SENTINEL);
-            
+
             if (enabled)
             {
               Plugin.Configuration.EnabledRetainerNames.Add(retainerName);
@@ -332,12 +350,12 @@ public sealed class ConfigWindow : Window
             }
             Plugin.Configuration.Save();
           }
-          
+
           // Place next checkbox on same line if it's an even index (0, 2, 4, 6, 8)
           if (i % 2 == 0 && i < namesToDisplay.Length - 1)
             ImGui.SameLine(0, 150);
         }
-        
+
         if (retainerNameArray == null && !namesUpdated)
         {
           ImGui.TextColored(new System.Numerics.Vector4(0.7f, 0.7f, 0.7f, 1), "(Using cached retainer list - open retainer list to refresh)");
@@ -382,7 +400,7 @@ public sealed class ConfigWindow : Window
     {
       ImGui.BeginTooltip();
       ImGui.SetTooltip("The key to hold to start the auto pinching process for the newly posted item.\r\n" +
-                       "Be aware that the configured key still does every other hotkey action it is configured for.");
+              "Be aware that the configured key still does every other hotkey action it is configured for.");
       ImGui.EndTooltip();
     }
 
@@ -418,7 +436,7 @@ public sealed class ConfigWindow : Window
     {
       ImGui.BeginTooltip();
       ImGui.SetTooltip("The key to press to start the auto pinching process.\r\n" +
-                       "Be aware that the configured key still does every other hotkey action it is configured for.");
+              "Be aware that the configured key still does every other hotkey action it is configured for.");
       ImGui.EndTooltip();
     }
 
@@ -501,6 +519,81 @@ public sealed class ConfigWindow : Window
         ImGui.SetTooltip("Sets the volume of the Text-to-speech message");
         ImGui.EndTooltip();
       }
+    }
+  }
+
+  private static void DrawItemPriceLimits()
+  {
+    ImGui.Separator();
+    ImGui.Text("Per-Item Price Limits");
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Minimum and maximum prices per item. 0 means no limit.");
+      ImGui.EndTooltip();
+    }
+
+    if (Plugin.Configuration.ItemPriceLimits.Count == 0)
+    {
+      ImGui.TextColored(new System.Numerics.Vector4(0.7f, 0.7f, 0.7f, 1), "Right-click an inventory item to add it here.");
+      return;
+    }
+
+    ItemPriceLimit? limitToRemove = null;
+    var tableFlags = ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.NoSavedSettings | ImGuiTableFlags.SizingStretchProp;
+    if (ImGui.BeginTable("##itemPriceLimitsTable", 4, tableFlags))
+    {
+      ImGui.TableSetupColumn("Item", ImGuiTableColumnFlags.WidthStretch);
+      ImGui.TableSetupColumn("Min", ImGuiTableColumnFlags.WidthFixed, 120f);
+      ImGui.TableSetupColumn("Max", ImGuiTableColumnFlags.WidthFixed, 120f);
+      ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 70f);
+      ImGui.TableHeadersRow();
+
+      foreach (var limit in Plugin.Configuration.ItemPriceLimits
+            .OrderBy(limit => ItemNameResolver.GetItemName(limit.ItemId))
+            .ThenBy(limit => limit.ItemId)
+            .ToList())
+      {
+        ImGui.TableNextRow();
+        ImGui.TableNextColumn();
+        ImGui.TextUnformatted(ItemNameResolver.GetItemName(limit.ItemId));
+        if (ImGui.IsItemHovered())
+          ImGui.SetTooltip($"Item ID: {limit.ItemId}");
+
+        ImGui.TableNextColumn();
+        var minPrice = limit.MinPrice;
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.InputInt($"##itemPriceLimitMin{limit.ItemId}", ref minPrice))
+        {
+          limit.MinPrice = Math.Clamp(minPrice, 0, int.MaxValue);
+          if (limit.MaxPrice > 0 && limit.MaxPrice < limit.MinPrice)
+            limit.MaxPrice = limit.MinPrice;
+          Plugin.Configuration.Save();
+        }
+
+        ImGui.TableNextColumn();
+        var maxPrice = limit.MaxPrice;
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.InputInt($"##itemPriceLimitMax{limit.ItemId}", ref maxPrice))
+        {
+          limit.MaxPrice = Math.Clamp(maxPrice, 0, int.MaxValue);
+          if (limit.MaxPrice > 0 && limit.MinPrice > limit.MaxPrice)
+            limit.MinPrice = limit.MaxPrice;
+          Plugin.Configuration.Save();
+        }
+
+        ImGui.TableNextColumn();
+        if (ImGui.SmallButton($"Remove##itemPriceLimitRemove{limit.ItemId}"))
+          limitToRemove = limit;
+      }
+
+      ImGui.EndTable();
+    }
+
+    if (limitToRemove != null)
+    {
+      Plugin.Configuration.ItemPriceLimits.Remove(limitToRemove);
+      Plugin.Configuration.Save();
     }
   }
 }
