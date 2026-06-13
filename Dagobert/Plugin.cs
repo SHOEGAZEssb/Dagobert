@@ -79,6 +79,9 @@ public sealed class Plugin : IDalamudPlugin
 
   private void OnContextMenuOpened(IMenuOpenedArgs args)
   {
+    if (!Configuration.ShowInventoryContextMenuEntry)
+      return;
+
     if (args.MenuType != ContextMenuType.Inventory)
       return;
 

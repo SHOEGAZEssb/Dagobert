@@ -16,9 +16,9 @@
       },
       "System.Speech": {
         "type": "Direct",
-        "requested": "[10.0.9, )",
-        "resolved": "10.0.9",
-        "contentHash": "Vu3phH8vWRFhzMp5D/H64LZlYNQ/2PAb7aAnw5DxfeQo1hAaA4CjQReIrqrqbjzpkIbuUpX1YwAEGNQlFPaeUw=="
+        "requested": "[10.0.8, )",
+        "resolved": "10.0.8",
+        "contentHash": "uxrdoUKw+S1eBo0foyv3pQ13NKV4LhsgaD5FV1zya1JHoi+QveWXt6I5nrLhA4GeheRr+cjLfDy0hx7UXUyHnw=="
       },
       "ecommons": {
         "type": "Project"

@@ -93,6 +93,8 @@ public sealed class Configuration : IPluginConfiguration
 
   public List<ulong> SeenRetainers { get; set; } = [];
 
+  public bool ShowInventoryContextMenuEntry { get; set; } = true;
+
   public List<ItemPriceLimit> ItemPriceLimits { get; set; } = [];
 
   /// <summary>

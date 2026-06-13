@@ -250,6 +250,20 @@ public sealed class ConfigWindow : Window
       ImGui.SetTooltip("Default amount in case of error (0 = disabled)");
       ImGui.EndTooltip();
     }
+
+    var showInventoryContextMenuEntry = Plugin.Configuration.ShowInventoryContextMenuEntry;
+    if (ImGui.Checkbox("Show inventory context menu entry", ref showInventoryContextMenuEntry))
+    {
+      Plugin.Configuration.ShowInventoryContextMenuEntry = showInventoryContextMenuEntry;
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("If enabled, adds a Dagobert entry to inventory item context menus for configuring per-item price limits.");
+      ImGui.EndTooltip();
+    }
+
     ImGui.Separator();
 
     ImGui.Text("Retainer Selection");

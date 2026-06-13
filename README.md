@@ -30,6 +30,7 @@ The `/dagobert` configuration window has two tabs:
 | Undercut Self | Off | When off, Dagobert will not undercut listings from your own retainers. |
 | Use Universalis data center prices | Off | Uses the cheapest listing on your current data center from Universalis instead of only the in-game Market Board result. |
 | Default amount | 0 gil | Fallback price when no price can be found. `0` disables the fallback. |
+| Show inventory context menu entry | On | Adds the right-click inventory entry used to add or configure per-item min/max prices. |
 
 ### Per-Item Min/Max Prices
 
@@ -42,6 +43,8 @@ Use the `Min/Max Prices` tab to set item-specific price limits. `0` means no lim
 | Remove | Deletes the item-specific limits. |
 
 Right-click an item in your inventory and choose `Add Dagobert price limits` to add it to the table. If the item is already configured, the same menu entry opens the configuration window as `Configure Dagobert price limits`.
+
+Disable `Show inventory context menu entry` in the `General` tab to hide this right-click entry.
 
 Per-item limits are applied after Dagobert finds a candidate price, including prices from Universalis, and before the price is written to the retainer listing.
 
