@@ -97,6 +97,8 @@ Dagobert adds an `Auto Pinch` button to the retainer list and retainer sell list
 
 After processing all retainers, Auto Pinch closes the retainer list before allowing AutoRetainer to resume.
 
+Post pinching fetches a fresh price for each manually opened item pricing window. Prices are reused only within the current Auto Pinch batch.
+
 ## Development
 
 Run the NUnit tests with .NET 10 and the Dalamud assemblies used to build the plugin:

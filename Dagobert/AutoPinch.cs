@@ -79,7 +79,7 @@ namespace Dagobert
         Plugin.Configuration.Save();
       }
 
-      Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, RetainerSellPostSetup);
+      Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "RetainerSell", RetainerSellPostSetup);
     }
 
     public void Dispose()
@@ -87,7 +87,7 @@ namespace Dagobert
       _disposed = true;
       CancelUniversalisPriceRequest();
       _universalisPriceProvider.Dispose();
-      Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, RetainerSellPostSetup);
+      Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "RetainerSell", RetainerSellPostSetup);
       _mbHandler.NewPriceReceived -= MBHandler_NewPriceReceived;
       _mbHandler.Dispose();
     }
@@ -690,6 +690,8 @@ namespace Dagobert
     {
       if (_taskManager.IsBusy)
         return;
+
+      ClearState();
 
       if (Plugin.Configuration.EnablePostPinchkey && Plugin.KeyState[Plugin.Configuration.PostPinchKey])
       {
