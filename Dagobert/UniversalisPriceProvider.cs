@@ -53,7 +53,7 @@ internal sealed class UniversalisPriceProvider : IDisposable
     var ownRetainer = ulong.TryParse(listing.RetainerId, out var retainerId)
                       && Plugin.Configuration.SeenRetainers.Contains(retainerId);
     Svc.Log.Debug($"Universalis lowest data center price: {listing.PricePerUnit} on {listing.WorldName ?? dataCenterName}");
-    return CalculateNewPrice(listing.PricePerUnit, ownRetainer);
+    return CalculateNewPrice(listing.PricePerUnit, ownRetainer, Plugin.Configuration);
   }
 
   public void Dispose()
@@ -96,17 +96,17 @@ internal sealed class UniversalisPriceProvider : IDisposable
       .FirstOrDefault();
   }
 
-  private static int CalculateNewPrice(long pricePerUnit, bool ownRetainer)
+  internal static int CalculateNewPrice(long pricePerUnit, bool ownRetainer, Configuration configuration)
   {
     var price = (int)Math.Min(pricePerUnit, int.MaxValue);
 
-    if (!Plugin.Configuration.UndercutSelf && ownRetainer)
+    if (!configuration.UndercutSelf && ownRetainer)
       return price;
 
-    if (Plugin.Configuration.UndercutMode == UndercutMode.FixedAmount)
-      return Math.Max(price - Plugin.Configuration.UndercutAmount, 1);
+    if (configuration.UndercutMode == UndercutMode.FixedAmount)
+      return Math.Max(price - configuration.UndercutAmount, 1);
 
-    return (int)Math.Max((100L - Plugin.Configuration.UndercutAmount) * price / 100L, 1);
+    return (int)Math.Max((100L - configuration.UndercutAmount) * price / 100L, 1);
   }
 
   private static string NormalizeItemName(string itemName)

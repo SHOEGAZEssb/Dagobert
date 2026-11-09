@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <Content Include="Dagobert.json" />
+    <InternalsVisibleTo Include="Dagobert.Tests" />
   </ItemGroup>
 
   <ItemGroup>

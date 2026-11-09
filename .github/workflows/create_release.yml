@@ -10,7 +10,11 @@ permissions:
   contents: write
 
 jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
   release:
+    needs: tests
     uses: SHOEGAZEssb/DalamudPluginRepo/.github/workflows/reusable_create_release.yml@main
     with:
       internal_name: Dagobert
