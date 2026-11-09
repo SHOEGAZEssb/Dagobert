@@ -75,6 +75,8 @@ public sealed class Configuration : IPluginConfiguration
 
   public bool AllowPriceIncreases { get; set; } = true;
 
+  public float MaxPriceIncreasePercentage { get; set; } = 0;
+
   public bool UndercutSelf { get; set; } = false;
 
   public bool UseUniversalisDataCenterPrices { get; set; } = false;
@@ -124,7 +126,12 @@ public sealed class Configuration : IPluginConfiguration
   public int ApplyPriceLimits(uint itemId, int currentPrice, int price)
   {
     price = GetItemPriceLimit(itemId)?.Apply(price) ?? price;
-    return AllowPriceIncreases ? price : Math.Min(price, currentPrice);
+    var increase = (long)price - currentPrice;
+    if (increase > 0 && (!AllowPriceIncreases ||
+        (MaxPriceIncreasePercentage > 0 && increase * 100m > currentPrice * (decimal)MaxPriceIncreasePercentage)))
+      return currentPrice;
+
+    return price;
   }
 
   public bool IsUndercutAllowed(int currentPrice, int price)

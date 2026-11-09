@@ -29,6 +29,7 @@ The `/dagobert` configuration window has two tabs:
 | Max Undercut percentage | 100% | Safety limit. Price changes that would cut more than this percentage are skipped. |
 | Max Undercut amount (gil) | 0 gil | Additional safety limit per unit. Reductions exceeding either this amount or the percentage limit are skipped. `0` disables the gil limit. |
 | Allow price increases | On | When off, automatic price adjustments cannot exceed the current asking price, including fallback prices and per-item minimums. |
+| Max Price Increase (%) | 0% | Increases above this percentage leave the current asking price unchanged, including increases from per-item minimums. `0` means unlimited. Requires `Allow price increases`. |
 | Undercut Self | Off | When off, Dagobert will not undercut listings from your own retainers. |
 | Use Universalis data center prices | Off | Uses the cheapest listing on your current data center from Universalis instead of only the in-game Market Board result. |
 | Default amount | 0 gil | Fallback price when no price can be found. `0` disables the fallback. |

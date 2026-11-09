@@ -152,6 +152,21 @@ public sealed class ConfigWindow : Window
       ImGui.EndTooltip();
     }
 
+    ImGui.BeginDisabled(!allowPriceIncreases);
+    var maxPriceIncrease = Plugin.Configuration.MaxPriceIncreasePercentage;
+    if (ImGui.InputFloat("Max Price Increase (%)", ref maxPriceIncrease) && float.IsFinite(maxPriceIncrease))
+    {
+      Plugin.Configuration.MaxPriceIncreasePercentage = Math.Clamp(maxPriceIncrease, 0, 100f * int.MaxValue);
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Increases above this percentage leave the current asking price unchanged, including increases from per-item minimums. 0 means unlimited.");
+      ImGui.EndTooltip();
+    }
+    ImGui.EndDisabled();
+
     var undercutSelf = Plugin.Configuration.UndercutSelf;
     if (ImGui.Checkbox("Undercut Self", ref undercutSelf))
     {
