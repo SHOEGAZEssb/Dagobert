@@ -126,6 +126,19 @@ public sealed class ConfigWindow : Window
       ImGui.EndTooltip();
     }
 
+    var maxUndercutAmount = Plugin.Configuration.MaxUndercutAmount;
+    if (ImGui.InputInt("Max Undercut amount (gil)", ref maxUndercutAmount))
+    {
+      Plugin.Configuration.MaxUndercutAmount = Math.Clamp(maxUndercutAmount, 0, int.MaxValue);
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Price reductions exceeding this gil amount or the percentage limit are skipped. 0 disables the gil limit.");
+      ImGui.EndTooltip();
+    }
+
     var allowPriceIncreases = Plugin.Configuration.AllowPriceIncreases;
     if (ImGui.Checkbox("Allow price increases", ref allowPriceIncreases))
     {

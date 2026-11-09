@@ -101,24 +101,28 @@ public static class Communicator
     return null;
   }
 
-  public static void PrintAboveMaxCutError(string itemName)
+  public static void PrintAboveUndercutLimitError(string itemName)
   {
     if (!Plugin.Configuration.ShowErrorsInChat)
       return;
 
+    var limits = $"{Plugin.Configuration.MaxUndercutPercentage}%";
+    if (Plugin.Configuration.MaxUndercutAmount > 0)
+      limits += $" and {Plugin.Configuration.MaxUndercutAmount:N0} gil";
+    var message = $"Item ignored because the price reduction exceeds the configured undercut limits ({limits})";
     var itemPayload = RawItemNameToItemPayload(itemName);
 
     if (itemPayload != null)
     {
       var seString = new SeStringBuilder()
           .AddItemLink(itemPayload.ItemId, itemPayload.IsHQ)
-          .AddText($": Item ignored because it would cut the price by more than {Plugin.Configuration.MaxUndercutPercentage}%")
+          .AddText($": {message}")
           .Build();
 
       Svc.Chat.PrintError(seString);
     }
     else
-      Svc.Chat.PrintError($"{itemName}: Item ignored because it would cut the price by more than {Plugin.Configuration.MaxUndercutPercentage}%");
+      Svc.Chat.PrintError($"{itemName}: {message}");
   }
 
   public static void PrintRetainerName(string name)

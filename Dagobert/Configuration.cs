@@ -71,6 +71,8 @@ public sealed class Configuration : IPluginConfiguration
 
   public float MaxUndercutPercentage { get; set; } = 100.0f;
 
+  public int MaxUndercutAmount { get; set; } = 0;
+
   public bool AllowPriceIncreases { get; set; } = true;
 
   public bool UndercutSelf { get; set; } = false;
@@ -123,6 +125,14 @@ public sealed class Configuration : IPluginConfiguration
   {
     price = GetItemPriceLimit(itemId)?.Apply(price) ?? price;
     return AllowPriceIncreases ? price : Math.Min(price, currentPrice);
+  }
+
+  public bool IsUndercutAllowed(int currentPrice, int price)
+  {
+    var reduction = (long)currentPrice - price;
+    return reduction <= 0 ||
+      (reduction * 100m <= currentPrice * (decimal)MaxUndercutPercentage &&
+       (MaxUndercutAmount <= 0 || reduction <= MaxUndercutAmount));
   }
 
   public ItemPriceLimit GetOrAddItemPriceLimit(uint itemId)

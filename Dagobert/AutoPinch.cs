@@ -565,7 +565,7 @@ namespace Dagobert
           }
 
           var cutPercentage = ((float)_newPrice.Value - _oldPrice.Value) / _oldPrice.Value * 100f;
-          if (cutPercentage >= -Plugin.Configuration.MaxUndercutPercentage)
+          if (Plugin.Configuration.IsUndercutAllowed(_oldPrice.Value, _newPrice.Value))
           {
             Svc.Log.Debug($"Setting new price");
             _cachedPrices.TryAdd(itemName, new CachedPrice(candidatePrice, _newPriceFromUniversalis));
@@ -573,7 +573,7 @@ namespace Dagobert
             Communicator.PrintPriceUpdate(itemName, _oldPrice.Value, _newPrice.Value, cutPercentage, _newPriceFromUniversalis);
           }
           else
-            Communicator.PrintAboveMaxCutError(itemName);
+            Communicator.PrintAboveUndercutLimitError(itemName);
 
           ECommons.Automation.Callback.Fire(&retainerSell->AtkUnitBase, true, 0); // confirm
           ui->Close(true);
