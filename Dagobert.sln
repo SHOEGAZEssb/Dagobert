@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dagobert", "Dagobert\Dagobe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ECommons", "ECommons\ECommons\ECommons.csproj", "{1E7FE15C-61ED-4802-BD93-82A663BF1DC4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dagobert.Tests", "Dagobert.Tests\Dagobert.Tests.csproj", "{9FCD6DC2-030B-4EE2-B1B9-0D1971B43E7C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{1E7FE15C-61ED-4802-BD93-82A663BF1DC4}.Release|x64.Build.0 = Release|x64
 		{1E7FE15C-61ED-4802-BD93-82A663BF1DC4}.ReleaseForms|x64.ActiveCfg = ReleaseForms|x64
 		{1E7FE15C-61ED-4802-BD93-82A663BF1DC4}.ReleaseForms|x64.Build.0 = ReleaseForms|x64
+		{9FCD6DC2-030B-4EE2-B1B9-0D1971B43E7C}.Debug|x64.ActiveCfg = Debug|x64
+		{9FCD6DC2-030B-4EE2-B1B9-0D1971B43E7C}.Debug|x64.Build.0 = Debug|x64
+		{9FCD6DC2-030B-4EE2-B1B9-0D1971B43E7C}.DebugForms|x64.ActiveCfg = Debug|x64
+		{9FCD6DC2-030B-4EE2-B1B9-0D1971B43E7C}.DebugForms|x64.Build.0 = Debug|x64
+		{9FCD6DC2-030B-4EE2-B1B9-0D1971B43E7C}.Release|x64.ActiveCfg = Release|x64
+		{9FCD6DC2-030B-4EE2-B1B9-0D1971B43E7C}.Release|x64.Build.0 = Release|x64
+		{9FCD6DC2-030B-4EE2-B1B9-0D1971B43E7C}.ReleaseForms|x64.ActiveCfg = Release|x64
+		{9FCD6DC2-030B-4EE2-B1B9-0D1971B43E7C}.ReleaseForms|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

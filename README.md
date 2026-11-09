@@ -27,6 +27,7 @@ The `/dagobert` configuration window has two tabs:
 | Undercut Mode | FixedAmount | Choose between subtracting a fixed gil amount or a percentage from the lowest price. |
 | Undercut amount | 1 gil | How much to undercut by. In Percentage mode this is 1-99%. |
 | Max Undercut percentage | 100% | Safety limit. Price changes that would cut more than this percentage are skipped. |
+| Allow price increases | On | When off, automatic price adjustments cannot exceed the current asking price, including fallback prices and per-item minimums. |
 | Undercut Self | Off | When off, Dagobert will not undercut listings from your own retainers. |
 | Use Universalis data center prices | Off | Uses the cheapest listing on your current data center from Universalis instead of only the in-game Market Board result. |
 | Default amount | 0 gil | Fallback price when no price can be found. `0` disables the fallback. |
@@ -91,3 +92,13 @@ The Text-to-Speech options are shown when Windows TTS is available.
 ## Usage
 
 Dagobert adds an `Auto Pinch` button to the retainer list and retainer sell list. While Auto Pinch is running, avoid interacting with the game until it finishes or you press `Cancel`.
+
+## Development
+
+Run the NUnit tests with .NET 10 and the Dalamud assemblies used to build the plugin:
+
+```powershell
+dotnet test Dagobert.Tests/Dagobert.Tests.csproj -c Release -p:Use_DalamudPackager=false "-p:DalamudLibPath=C:/path/to/dalamud/"
+```
+
+Omit `DalamudLibPath` when the assemblies are in the default XIVLauncher location.

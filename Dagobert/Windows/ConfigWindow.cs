@@ -126,6 +126,19 @@ public sealed class ConfigWindow : Window
       ImGui.EndTooltip();
     }
 
+    var allowPriceIncreases = Plugin.Configuration.AllowPriceIncreases;
+    if (ImGui.Checkbox("Allow price increases", ref allowPriceIncreases))
+    {
+      Plugin.Configuration.AllowPriceIncreases = allowPriceIncreases;
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("If unchecked, automatic price adjustments never exceed the current asking price, even when a per-item minimum is higher.");
+      ImGui.EndTooltip();
+    }
+
     var undercutSelf = Plugin.Configuration.UndercutSelf;
     if (ImGui.Checkbox("Undercut Self", ref undercutSelf))
     {

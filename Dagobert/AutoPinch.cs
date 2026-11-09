@@ -537,10 +537,12 @@ namespace Dagobert
           }
 
           var rawItemName = GetRetainerSellRawItemName(retainerSell);
-          var limitedPrice = ApplyItemPriceLimits(itemName, rawItemName, _newPrice.Value);
+          ItemNameResolver.TryGetItemId(itemName, rawItemName, out var itemId);
+          var candidatePrice = _newPrice.Value;
+          var limitedPrice = Plugin.Configuration.ApplyPriceLimits(itemId, _oldPrice.Value, candidatePrice);
           if (limitedPrice != _newPrice.Value)
           {
-            Svc.Log.Debug($"{itemName}: item price limit adjusted {_newPrice.Value} to {limitedPrice}");
+            Svc.Log.Debug($"{itemName}: price limits adjusted {_newPrice.Value} to {limitedPrice}");
             _newPrice = limitedPrice;
           }
 
@@ -548,7 +550,7 @@ namespace Dagobert
           if (cutPercentage >= -Plugin.Configuration.MaxUndercutPercentage)
           {
             Svc.Log.Debug($"Setting new price");
-            _cachedPrices.TryAdd(itemName, new CachedPrice(_newPrice.Value, _newPriceFromUniversalis));
+            _cachedPrices.TryAdd(itemName, new CachedPrice(candidatePrice, _newPriceFromUniversalis));
             retainerSell->AskingPrice->SetValue(_newPrice.Value);
             Communicator.PrintPriceUpdate(itemName, _oldPrice.Value, _newPrice.Value, cutPercentage, _newPriceFromUniversalis);
           }
@@ -587,15 +589,6 @@ namespace Dagobert
     private static unsafe string GetRetainerSellRawItemName(AddonRetainerSell* addon)
     {
       return addon->ItemName->NodeText.ToString();
-    }
-
-    private static int ApplyItemPriceLimits(string itemName, string rawItemName, int price)
-    {
-      if (!ItemNameResolver.TryGetItemId(itemName, rawItemName, out var itemId))
-        return price;
-
-      var limit = Plugin.Configuration.GetItemPriceLimit(itemId);
-      return limit?.Apply(price) ?? price;
     }
 
     private void StartUniversalisPriceRequest(string itemName, string rawItemName)
