@@ -95,6 +95,8 @@ The Text-to-Speech options are shown when Windows TTS is available.
 
 Dagobert adds an `Auto Pinch` button to the retainer list and retainer sell list. While Auto Pinch is running, avoid interacting with the game until it finishes or you press `Cancel`.
 
+After processing all retainers, Auto Pinch closes the retainer list before allowing AutoRetainer to resume.
+
 ## Development
 
 Run the NUnit tests with .NET 10 and the Dalamud assemblies used to build the plugin:

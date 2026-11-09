@@ -278,11 +278,12 @@ namespace Dagobert
             EnqueueSingleRetainer(i);
           }
           
-          _taskManager.Enqueue(RemoveTalkAddonListeners);
           if (Plugin.Configuration.TTSWhenAllDone)
             _taskManager.Enqueue(() => SpeakTTS(Plugin.Configuration.TTSWhenAllDoneMsg), "SpeakTTSAll");
         }
 
+        _taskManager.Enqueue(RemoveTalkAddonListeners);
+        _taskManager.Enqueue(CloseRetainerList, "CloseRetainerList");
         _taskManager.Enqueue(() => AutoRetainerIPC.Suppressed(false));
       }
     }
@@ -344,6 +345,23 @@ namespace Dagobert
       }
       else
         return false;
+    }
+
+    private static unsafe bool? CloseRetainerList()
+    {
+      GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon);
+      return CloseRetainerList(addon);
+    }
+
+    internal static unsafe bool? CloseRetainerList(AtkUnitBase* addon)
+    {
+      if (addon == null || !addon->IsVisible)
+        return true;
+
+      if (GenericHelpers.IsAddonReady(addon))
+        addon->Close(true);
+
+      return false;
     }
 
     private unsafe void PinchAllRetainerItems()
