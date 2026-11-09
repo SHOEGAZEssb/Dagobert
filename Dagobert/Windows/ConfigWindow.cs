@@ -440,7 +440,7 @@ public sealed class ConfigWindow : Window
     if (ImGui.IsItemHovered())
     {
       ImGui.BeginTooltip();
-      ImGui.SetTooltip("If enabled allows you to press a specified key to start the auto pinching process.");
+      ImGui.SetTooltip("If enabled, press the specified key to start Auto Pinch. Press it again to cancel the running process.");
       ImGui.EndTooltip();
     }
 
@@ -462,7 +462,7 @@ public sealed class ConfigWindow : Window
     if (ImGui.IsItemHovered())
     {
       ImGui.BeginTooltip();
-      ImGui.SetTooltip("The key to press to start the auto pinching process.\r\n" +
+      ImGui.SetTooltip("The key to press to start or cancel the auto pinching process.\r\n" +
               "Be aware that the configured key still does every other hotkey action it is configured for.");
       ImGui.EndTooltip();
     }

@@ -74,7 +74,7 @@ Recommended timing values are around `3000-4000 ms` for the price check delay an
 | --- | --- | --- |
 | Enable Post Pinch Hotkey | On | Lets you hold the configured key while posting a new item to automatically get the lowest price. |
 | Auto Post Pinch Key | Shift | Key used for post pinch. |
-| Enable Pinch Hotkey | Off | Lets you press the configured key to start Auto Pinch from the retainer list or retainer sell list. |
+| Enable Pinch Hotkey | Off | Press the configured key to start Auto Pinch from the retainer list or retainer sell list. Press it again to cancel. Holding the key does not repeat the action. |
 | Auto Pinch Key | Q | Key used for Auto Pinch. |
 
 Configured hotkeys still perform their normal in-game actions.

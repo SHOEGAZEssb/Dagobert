@@ -38,6 +38,7 @@ namespace Dagobert
     private bool _cachedPricesUseUniversalisDataCenterPrices;
     private int _universalisPriceRequestId;
     private bool _disposed;
+    private bool _pinchKeyWasDown;
     private CancellationTokenSource? _universalisPriceRequestCts;
 
     public AutoPinch()
@@ -96,8 +97,14 @@ namespace Dagobert
       try
       {
         ClearCachedPricesIfUniversalisSettingChanged();
-        DrawForRetainerList();
-        DrawForRetainerSellList();
+        var pinchKeyPressed = ConsumePinchKeyPress(Plugin.Configuration.EnablePinchKey && Plugin.KeyState[Plugin.Configuration.PinchKey], ref _pinchKeyWasDown);
+        if (pinchKeyPressed && _taskManager.IsBusy)
+        {
+          CancelAutoPinch();
+          pinchKeyPressed = false;
+        }
+        DrawForRetainerList(pinchKeyPressed);
+        DrawForRetainerSellList(pinchKeyPressed);
       }
       catch (Exception ex)
       {
@@ -110,13 +117,20 @@ namespace Dagobert
       }
     }
 
-    private void DrawForRetainerList()
+    internal static bool ConsumePinchKeyPress(bool keyDown, ref bool wasDown)
+    {
+      var pressed = keyDown && !wasDown;
+      wasDown = keyDown;
+      return pressed;
+    }
+
+    private void DrawForRetainerList(bool pinchKeyPressed)
     {
       unsafe
       {
         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon) && GenericHelpers.IsAddonReady(addon))
         {
-          if (Plugin.Configuration.EnablePinchKey && Plugin.KeyState[Plugin.Configuration.PinchKey])
+          if (pinchKeyPressed)
             PinchAllRetainers();
 
           var node = addon->UldManager.NodeList[27];
@@ -131,13 +145,13 @@ namespace Dagobert
       }
     }
 
-    private void DrawForRetainerSellList()
+    private void DrawForRetainerSellList(bool pinchKeyPressed)
     {
       unsafe
       {
         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerSellList", out var addon) && GenericHelpers.IsAddonReady(addon))
         {
-          if (Plugin.Configuration.EnablePinchKey && Plugin.KeyState[Plugin.Configuration.PinchKey])
+          if (pinchKeyPressed)
             PinchAllRetainerItems();
 
           var node = addon->UldManager.NodeList[17];
@@ -190,11 +204,7 @@ namespace Dagobert
       if (_taskManager.IsBusy)
       {
         if (ImGui.Button("Cancel"))
-        {
-          _taskManager.Abort();
-          AutoRetainerIPC.Suppressed(false);
-          RemoveTalkAddonListeners();
-        }
+          CancelAutoPinch();
         if (ImGui.IsItemHovered())
         {
           ImGui.BeginTooltip();
@@ -214,6 +224,14 @@ namespace Dagobert
           ImGui.EndTooltip();
         }
       }
+    }
+
+    private void CancelAutoPinch()
+    {
+      _taskManager.Abort();
+      ClearState();
+      RemoveTalkAddonListeners();
+      AutoRetainerIPC.Suppressed(false);
     }
 
     private unsafe void PinchAllRetainers()
