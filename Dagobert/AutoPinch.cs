@@ -14,6 +14,7 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Dalamud.Bindings.ImGui;
+using Addon = Lumina.Excel.Sheets.Addon;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,6 @@ using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Game.Text.SeStringHandling;
-using static ECommons.UIHelpers.AtkReaderImplementations.ReaderContextMenu;
 
 namespace Dagobert
 {
@@ -446,7 +446,9 @@ namespace Dagobert
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("ContextMenu", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
         var reader = new ReaderContextMenu(addon);
-        if (!IsItemMannequin(reader.Entries))
+        // Addon 930 is the client's localized "Adjust Price" context menu label.
+        var adjustPriceText = Svc.Data.GetExcelSheet<Addon>().GetRow(930).Text.GetText();
+        if (!IsItemMannequin(reader.Entries.Select(entry => entry.Name), adjustPriceText))
         {
           Svc.Log.Debug($"Clicking adjust price");
           ECommons.Automation.Callback.Fire(addon, true, 0, 0, 0, 0, 0); // click adjust price
@@ -469,13 +471,12 @@ namespace Dagobert
     /// the "adjust price" entry in the given <paramref name="contextMenuEntries"/>.
     /// </summary>
     /// <param name="contextMenuEntries">Context menu entries to check.</param>
+    /// <param name="adjustPriceText">The client's localized price adjustment label.</param>
     /// <returns>True if item is a mannequin item, false otherwise.</returns>
-    private static bool IsItemMannequin(List<ContextMenuEntry> contextMenuEntries)
+    internal static bool IsItemMannequin(IEnumerable<string> contextMenuEntries, string adjustPriceText)
     {
-      return !contextMenuEntries.Any((e) => e.Name.Equals("adjust price", StringComparison.CurrentCultureIgnoreCase)
-                                        || e.Name.Equals("preis ändern", StringComparison.CurrentCultureIgnoreCase)
-                                        || e.Name.Equals("価格を変更する", StringComparison.CurrentCultureIgnoreCase)
-                                        || e.Name.Equals("changer le prix", StringComparison.CurrentCultureIgnoreCase));
+      return string.IsNullOrWhiteSpace(adjustPriceText) ||
+        !contextMenuEntries.Any(name => string.Equals(name, adjustPriceText, StringComparison.OrdinalIgnoreCase));
     }
 
     private unsafe bool? DelayMarketBoard()
