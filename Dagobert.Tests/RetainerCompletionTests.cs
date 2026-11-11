@@ -4,21 +4,47 @@ using NUnit.Framework;
 
 namespace Dagobert.Tests;
 
+[NonParallelizable]
 public unsafe class RetainerCompletionTests
 {
-  [Test]
-  public void MissingRetainerListIsAlreadyComplete()
+  private nint _previousFireCallback;
+  private static int _callbackCount;
+  private static uint _valueCount;
+  private static AtkValue _callbackValue;
+  private static bool _closeFlag;
+  private static bool _hideOnCallback;
+
+  [SetUp]
+  public void SetUp()
   {
-    Assert.That(AutoPinch.CloseRetainerList(null), Is.True);
+    _previousFireCallback = AtkUnitBase.Addresses.FireCallback.Value;
+    AtkUnitBase.Addresses.FireCallback.Value = (nint)(delegate* unmanaged<AtkUnitBase*, uint, AtkValue*, byte, byte>)&FireCallback;
+    _callbackCount = 0;
+    _valueCount = 0;
+    _callbackValue = default;
+    _closeFlag = false;
+    _hideOnCallback = false;
   }
 
-  [Test]
-  public void HiddenRetainerListIsAlreadyComplete()
+  [TearDown]
+  public void TearDown() => AtkUnitBase.Addresses.FireCallback.Value = _previousFireCallback;
+
+  [TestCase(false)]
+  [TestCase(true)]
+  public void MissingRetainerListCompletesOnlyAfterCloseWasRequested(bool closeRequested)
+  {
+    Assert.That(AutoPinch.CloseRetainerList(null, ref closeRequested), Is.EqualTo(closeRequested));
+  }
+
+  [TestCase(false)]
+  [TestCase(true)]
+  public void HiddenRetainerListCompletesOnlyAfterCloseWasRequested(bool closeRequested)
   {
     var addon = new AtkUnitBase();
     addon.UldManager.LoadedState = AtkLoadState.Loaded;
 
-    Assert.That(AutoPinch.CloseRetainerList(&addon), Is.True);
+    Assert.That(AutoPinch.CloseRetainerList(&addon, ref closeRequested), Is.EqualTo(closeRequested));
+    Assert.That(_callbackCount, Is.Zero);
   }
 
   [Test]
@@ -26,8 +52,11 @@ public unsafe class RetainerCompletionTests
   {
     var addon = new AtkUnitBase { IsVisible = true };
     addon.UldManager.LoadedState = AtkLoadState.ResourceLoading;
+    bool closeRequested = false;
 
-    Assert.That(AutoPinch.CloseRetainerList(&addon), Is.False);
+    Assert.That(AutoPinch.CloseRetainerList(&addon, ref closeRequested), Is.False);
+    Assert.That(closeRequested, Is.False);
+    Assert.That(_callbackCount, Is.Zero);
     Assert.That(addon.IsVisible, Is.True);
   }
 
@@ -40,29 +69,44 @@ public unsafe class RetainerCompletionTests
     };
     var addon = new AtkUnitBase { VirtualTable = &vtable, IsVisible = true };
     addon.UldManager.LoadedState = AtkLoadState.Loaded;
+    bool closeRequested = false;
 
-    Assert.That(AutoPinch.CloseRetainerList(&addon), Is.False);
+    Assert.That(AutoPinch.CloseRetainerList(&addon, ref closeRequested), Is.False);
+    Assert.That(closeRequested, Is.False);
+    Assert.That(_callbackCount, Is.Zero);
     Assert.That(addon.IsVisible, Is.True);
   }
 
   [TestCase(true)]
   [TestCase(false)]
-  public void ClosingListCompletesOnlyAfterItBecomesHidden(bool hideOnClose)
+  public void WaitsForListToReturnThenSendsCloseCallbackAndWaitsForItToDisappear(bool hideOnClose)
   {
-    var close = hideOnClose
-      ? (delegate* unmanaged<AtkUnitBase*, byte, byte>)&CloseAndHide
-      : (delegate* unmanaged<AtkUnitBase*, byte, byte>)&CloseWithoutHiding;
+    _hideOnCallback = hideOnClose;
     var vtable = new AtkUnitBase.AtkUnitBaseVirtualTable
     {
       IsFullyLoaded = (delegate* unmanaged<AtkUnitBase*, bool>)(delegate* unmanaged<AtkUnitBase*, byte>)&FullyLoaded,
-      Close = (delegate* unmanaged<AtkUnitBase*, bool, bool>)close,
     };
-    var addon = new AtkUnitBase { VirtualTable = &vtable, IsVisible = true };
+    var addon = new AtkUnitBase { VirtualTable = &vtable };
     addon.UldManager.LoadedState = AtkLoadState.Loaded;
+    bool closeRequested = false;
 
-    Assert.That(AutoPinch.CloseRetainerList(&addon), Is.False);
+    Assert.That(AutoPinch.CloseRetainerList(&addon, ref closeRequested), Is.False);
+    Assert.That(_callbackCount, Is.Zero);
+
+    addon.IsVisible = true;
+    Assert.That(AutoPinch.CloseRetainerList(&addon, ref closeRequested), Is.False);
+    Assert.That(closeRequested, Is.True);
+    Assert.That(_callbackCount, Is.EqualTo(1));
+    Assert.That(_valueCount, Is.EqualTo(1));
+    Assert.That(_callbackValue.Type, Is.EqualTo(AtkValueType.Int));
+    Assert.That(_callbackValue.Int, Is.EqualTo(-1));
+    Assert.That(_closeFlag, Is.False);
     Assert.That(addon.IsVisible, Is.EqualTo(!hideOnClose));
-    Assert.That(AutoPinch.CloseRetainerList(&addon), Is.EqualTo(hideOnClose));
+    Assert.That(AutoPinch.CloseRetainerList(&addon, ref closeRequested), Is.EqualTo(hideOnClose));
+    Assert.That(_callbackCount, Is.EqualTo(1));
+
+    addon.IsVisible = false;
+    Assert.That(AutoPinch.CloseRetainerList(&addon, ref closeRequested), Is.True);
   }
 
   // Native C++ bools use bytes in these callbacks so their parameters are blittable.
@@ -73,12 +117,14 @@ public unsafe class RetainerCompletionTests
   private static byte NotFullyLoaded(AtkUnitBase* addon) => 0;
 
   [UnmanagedCallersOnly]
-  private static byte CloseAndHide(AtkUnitBase* addon, byte fireCallback)
+  private static byte FireCallback(AtkUnitBase* addon, uint valueCount, AtkValue* values, byte close)
   {
-    addon->IsVisible = false;
+    _callbackCount++;
+    _valueCount = valueCount;
+    _callbackValue = values[0];
+    _closeFlag = close != 0;
+    if (_hideOnCallback)
+      addon->IsVisible = false;
     return 1;
   }
-
-  [UnmanagedCallersOnly]
-  private static byte CloseWithoutHiding(AtkUnitBase* addon, byte fireCallback) => 1;
 }

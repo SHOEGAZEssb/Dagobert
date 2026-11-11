@@ -65,6 +65,7 @@ Recommended timing values are around `3000-4000 ms` for the price check delay an
 | Option | Default | Description |
 | --- | --- | --- |
 | Retainer Selection | All enabled | Choose which retainers are included when using Auto Pinch from the retainer list. Open the retainer list in-game to populate or refresh this list. |
+| Close retainer list after pinching | Off | Closes the main retainer list after Auto Pinch finishes all selected retainers. Applies when started from the main retainer list. |
 | Show errors in chat | On | Prints pinching errors and skipped items to chat. |
 | Show Price Adjustments | On | Prints detailed price changes to chat. |
 | Show Retainer Names | On | Prints each retainer name while pinching all retainers. |
@@ -95,7 +96,7 @@ The Text-to-Speech options are shown when Windows TTS is available.
 
 Dagobert adds an `Auto Pinch` button to the retainer list and retainer sell list. While Auto Pinch is running, avoid interacting with the game until it finishes or you press `Cancel`.
 
-After processing all retainers, Auto Pinch closes the retainer list before allowing AutoRetainer to resume.
+After processing all selected retainers, Auto Pinch leaves the retainer list open by default. Enable `Close retainer list after pinching` in the `General` tab to close it before allowing AutoRetainer to resume.
 
 Post pinching fetches a fresh price for each manually opened item pricing window. Prices are reused only within the current Auto Pinch batch.
 

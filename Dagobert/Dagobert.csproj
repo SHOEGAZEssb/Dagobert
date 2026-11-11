@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Speech" Version="10.0.14" />
+    <PackageReference Include="System.Speech" Version="11.0.0" />
   </ItemGroup>
 
   <ItemGroup>

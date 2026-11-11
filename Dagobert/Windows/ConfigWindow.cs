@@ -307,6 +307,19 @@ public sealed class ConfigWindow : Window
 
     ImGui.Separator();
 
+    var closeRetainerList = Plugin.Configuration.CloseRetainerListAfterPinching;
+    if (ImGui.Checkbox("Close retainer list after pinching", ref closeRetainerList))
+    {
+      Plugin.Configuration.CloseRetainerListAfterPinching = closeRetainerList;
+      Plugin.Configuration.Save();
+    }
+    if (ImGui.IsItemHovered())
+    {
+      ImGui.BeginTooltip();
+      ImGui.SetTooltip("Closes the retainer list after Auto Pinch finishes processing all selected retainers. Applies when started from the main retainer list.");
+      ImGui.EndTooltip();
+    }
+
     ImGui.Text("Retainer Selection");
     if (ImGui.IsItemHovered())
     {

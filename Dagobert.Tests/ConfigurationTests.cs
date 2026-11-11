@@ -5,6 +5,18 @@ namespace Dagobert.Tests;
 
 public class ConfigurationTests
 {
+  [TestCase("{}", false)]
+  [TestCase("{\"CloseRetainerListAfterPinching\":true}", true)]
+  [TestCase("{\"CloseRetainerListAfterPinching\":false}", false)]
+  public void RetainerListClosingSettingSupportsOldConfigsAndSavedValues(string json, bool expected)
+  {
+    var config = JsonSerializer.Deserialize<Configuration>(json)!;
+    Assert.That(config.CloseRetainerListAfterPinching, Is.EqualTo(expected));
+
+    var restored = JsonSerializer.Deserialize<Configuration>(JsonSerializer.Serialize(config))!;
+    Assert.That(restored.CloseRetainerListAfterPinching, Is.EqualTo(expected));
+  }
+
   [Test]
   public void AddingAnItemTwicePreservesItsExistingLimits()
   {

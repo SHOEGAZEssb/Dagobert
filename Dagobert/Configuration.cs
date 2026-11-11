@@ -85,6 +85,8 @@ public sealed class Configuration : IPluginConfiguration
 
   public bool ShowRetainerNames { get; set; } = true;
 
+  public bool CloseRetainerListAfterPinching { get; set; } = false;
+
   public bool TTSWhenAllDone { get; set; } = false;
 
   public string TTSWhenAllDoneMsg { get; set; } = "Finished auto pinching all retainers";

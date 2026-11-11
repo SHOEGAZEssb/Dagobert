@@ -282,8 +282,13 @@ namespace Dagobert
             _taskManager.Enqueue(() => SpeakTTS(Plugin.Configuration.TTSWhenAllDoneMsg), "SpeakTTSAll");
         }
 
+        if (Plugin.Configuration.CloseRetainerListAfterPinching)
+        {
+          bool closeRequested = false;
+          _taskManager.Enqueue(() => Svc.Log.Information("Auto Pinch finished; closing the retainer list."));
+          _taskManager.Enqueue(() => CloseRetainerList(ref closeRequested), "CloseRetainerList");
+        }
         _taskManager.Enqueue(RemoveTalkAddonListeners);
-        _taskManager.Enqueue(CloseRetainerList, "CloseRetainerList");
         _taskManager.Enqueue(() => AutoRetainerIPC.Suppressed(false));
       }
     }
@@ -347,19 +352,24 @@ namespace Dagobert
         return false;
     }
 
-    private static unsafe bool? CloseRetainerList()
+    private static unsafe bool? CloseRetainerList(ref bool closeRequested)
     {
       GenericHelpers.TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon);
-      return CloseRetainerList(addon);
+      return CloseRetainerList(addon, ref closeRequested);
     }
 
-    internal static unsafe bool? CloseRetainerList(AtkUnitBase* addon)
+    internal static unsafe bool? CloseRetainerList(AtkUnitBase* addon, ref bool closeRequested)
     {
+      // The list can still be hidden while returning from the last retainer.
       if (addon == null || !addon->IsVisible)
-        return true;
+        return closeRequested;
 
-      if (GenericHelpers.IsAddonReady(addon))
-        addon->Close(true);
+      if (!closeRequested && GenericHelpers.IsAddonReady(addon))
+      {
+        var close = new AtkValue { Type = AtkValueType.Int, Int = -1 };
+        addon->FireCallback(1, &close);
+        closeRequested = true;
+      }
 
       return false;
     }
