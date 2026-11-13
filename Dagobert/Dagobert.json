@@ -13,5 +13,5 @@
   "ImageUrls": [
     ""
   ],
-  "Changelog": ""
+  "Changelog": "Fix Auto Pinch skipping normal listings on German, French, and Japanese clients by using the localized context menu action instead of the pricing window title."
 }

@@ -27,6 +27,9 @@ namespace Dagobert
 {
   internal sealed class AutoPinch : Window, IDisposable
   {
+    // Row 930 is the window title, whose translation can differ from the menu action.
+    internal const uint AdjustPriceMenuTextRowId = 959;
+
     private readonly MarketBoardHandler _mbHandler;
     private readonly UniversalisPriceProvider _universalisPriceProvider;
     private int? _oldPrice;
@@ -456,8 +459,7 @@ namespace Dagobert
       if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("ContextMenu", out var addon) && GenericHelpers.IsAddonReady(addon))
       {
         var reader = new ReaderContextMenu(addon);
-        // Addon 930 is the client's localized "Adjust Price" context menu label.
-        var adjustPriceText = Svc.Data.GetExcelSheet<Addon>().GetRow(930).Text.GetText();
+        var adjustPriceText = Svc.Data.GetExcelSheet<Addon>().GetRow(AdjustPriceMenuTextRowId).Text.GetText();
         if (!IsItemMannequin(reader.Entries.Select(entry => entry.Name), adjustPriceText))
         {
           Svc.Log.Debug($"Clicking adjust price");
